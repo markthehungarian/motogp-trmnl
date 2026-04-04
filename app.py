@@ -69,29 +69,25 @@ CIRCUIT_INFO = {
 }
 
 def normalize_circuit_name(name):
-    """Fix small differences from the API (hyphens, accents, spacing)"""
+    """Fixes the exact difference between API and our dictionary"""
     if not name:
         return "default"
-    name = name.replace(" - ", " – ")          # fix hyphen
-    name = name.replace("Á", "A")              # fix Ángel
-    name = name.replace("á", "a")
+    name = name.replace(" - ", " – ")   # regular hyphen → en-dash
     name = name.strip()
     return name
 
 def fetch_motogp_data():
     base = "https://api.motogp.pulselive.com/motogp/v1"
     try:
-        print("=== Starting MotoGP data fetch ===")
-
-        # 1. Get current season UUID
+        # Get season UUID
         seasons = requests.get(f"{base}/results/seasons", timeout=10).json()
         season_uuid = next((s["id"] for s in seasons if s.get("current") or str(s.get("year")) == "2026"), "2026")
 
-        # 2. Get ALL events
+        # Get events
         events_resp = requests.get(f"{base}/results/events?seasonUuid={season_uuid}", timeout=15).json()
         events = events_resp if isinstance(events_resp, list) else []
 
-        # 3. Filter to FUTURE events only
+        # Find next upcoming race
         today = datetime.now().date()
         upcoming = []
         for e in events:
@@ -106,7 +102,7 @@ def fetch_motogp_data():
 
         next_event = upcoming[0] if upcoming else (events[0] if events else {})
 
-        # 4. Safe circuit name + normalization
+        # Safe circuit name
         circuit_raw = next_event.get("circuit") if isinstance(next_event, dict) else None
         circuit_name = ""
         if isinstance(circuit_raw, dict):
@@ -119,7 +115,7 @@ def fetch_motogp_data():
 
         data = {
             "next_race": {
-                "circuit": circuit_name,           # keep original for display
+                "circuit": circuit_name,
                 "date": next_event.get("date_start") or next_event.get("date", "TBD"),
                 "title": next_event.get("name") or next_event.get("title", ""),
                 "track_map_url": CIRCUIT_MAPS.get(clean_name, CIRCUIT_MAPS["default"]),
@@ -135,8 +131,6 @@ def fetch_motogp_data():
 
     except Exception as e:
         print(f"CRITICAL ERROR: {str(e)}")
-        import traceback
-        print(traceback.format_exc())
         return {"error": str(e), "message": "Check Render logs", "last_updated": datetime.now().isoformat()}
 
 @app.route("/motogp")
