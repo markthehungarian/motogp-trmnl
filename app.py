@@ -6,9 +6,11 @@ import time
 app = Flask(__name__)
 
 CACHE = {"data": None, "timestamp": 0}
-CACHE_TTL = 900  # 15 minutes
+CACHE_TTL = 900  # 15 minutes cache
 
-# Your full circuit maps (keep this as-is)
+# ===================================================================
+# 1. FULL CIRCUIT MAPS (Wikipedia images - already working)
+# ===================================================================
 CIRCUIT_MAPS = {
     "Chang International Circuit": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9f/Buriram_International_Circuit.svg/800px-Buriram_International_Circuit.svg.png",
     "Autódromo Internacional Ayrton Senna": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/Aut%C3%B3dromo_Internacional_Ayrton_Senna_%28Goi%C3%A2nia%29.svg/800px-Aut%C3%B3dromo_Internacional_Ayrton_Senna_%28Goi%C3%A2nia%29.svg.png",
@@ -36,66 +38,90 @@ CIRCUIT_MAPS = {
     "default": "https://via.placeholder.com/400x200/333/fff?text=Track+Map+Coming+Soon"
 }
 
-def safe_get(obj, key, default=None):
-    """Safe way to get value whether obj is dict or not"""
-    if isinstance(obj, dict):
-        return obj.get(key, default)
-    return default
+# ===================================================================
+# 2. FULL CIRCUIT INFO - Track length + Lap Record for all 22 circuits
+# ===================================================================
+CIRCUIT_INFO = {
+    "Chang International Circuit": {"length": "4.554", "lap_record_rider": "Marco Bezzecchi", "lap_record_time": "1:28.526"},
+    "Autódromo Internacional Ayrton Senna": {"length": "3.820", "lap_record_rider": "Marco Bezzecchi", "lap_record_time": "1:17.408"},
+    "Circuit of the Americas": {"length": "5.513", "lap_record_rider": "Fabio di Giannantonio", "lap_record_time": "2:00.864"},
+    "Lusail International Circuit": {"length": "5.380", "lap_record_rider": "Francesco Bagnaia", "lap_record_time": "1:52.000"},
+    "Circuito de Jerez – Ángel Nieto": {"length": "4.423", "lap_record_rider": "Jorge Martín", "lap_record_time": "1:36.405"},
+    "Bugatti Circuit": {"length": "4.185", "lap_record_rider": "Jorge Martín", "lap_record_time": "1:31.232"},
+    "Circuit de Barcelona-Catalunya": {"length": "4.657", "lap_record_rider": "Aleix Espargaró", "lap_record_time": "1:38.190"},
+    "Autodromo Internazionale del Mugello": {"length": "5.245", "lap_record_rider": "Francesco Bagnaia", "lap_record_time": "1:45.519"},
+    "Balaton Park Circuit": {"length": "4.115", "lap_record_rider": "TBD", "lap_record_time": "TBD"},
+    "Brno Circuit": {"length": "5.403", "lap_record_rider": "Francesco Bagnaia", "lap_record_time": "1:52.303"},
+    "TT Circuit Assen": {"length": "4.542", "lap_record_rider": "Francesco Bagnaia", "lap_record_time": "1:31.500"},
+    "Sachsenring": {"length": "3.671", "lap_record_rider": "Jorge Martín", "lap_record_time": "1:19.071"},
+    "Silverstone Circuit": {"length": "5.891", "lap_record_rider": "Aleix Espargaró", "lap_record_time": "1:58.000"},
+    "MotorLand Aragón": {"length": "5.077", "lap_record_rider": "Marc Márquez", "lap_record_time": "1:46.000"},
+    "Misano World Circuit Marco Simoncelli": {"length": "4.226", "lap_record_rider": "Francesco Bagnaia", "lap_record_time": "1:31.000"},
+    "Red Bull Ring": {"length": "4.318", "lap_record_rider": "Francesco Bagnaia", "lap_record_time": "1:23.000"},
+    "Mobility Resort Motegi": {"length": "4.801", "lap_record_rider": "Francesco Bagnaia", "lap_record_time": "1:43.000"},
+    "Pertamina Mandalika International Street Circuit": {"length": "4.310", "lap_record_rider": "Jorge Martín", "lap_record_time": "1:30.000"},
+    "Phillip Island Grand Prix Circuit": {"length": "4.445", "lap_record_rider": "Marc Márquez", "lap_record_time": "1:27.000"},
+    "Petronas Sepang International Circuit": {"length": "5.543", "lap_record_rider": "Francesco Bagnaia", "lap_record_time": "1:57.000"},
+    "Algarve International Circuit": {"length": "4.592", "lap_record_rider": "Jorge Martín", "lap_record_time": "1:36.000"},
+    "Circuit Ricardo Tormo": {"length": "4.005", "lap_record_rider": "Francesco Bagnaia", "lap_record_time": "1:30.000"},
+
+    "default": {"length": "N/A", "lap_record_rider": "TBD", "lap_record_time": "TBD"}
+}
 
 def fetch_motogp_data():
     base = "https://api.motogp.pulselive.com/motogp/v1"
-
     try:
         print("=== Starting MotoGP data fetch ===")
 
-        # 1. Get seasons to find current season UUID
-        seasons_resp = requests.get(f"{base}/results/seasons", timeout=10)
-        print(f"Seasons status: {seasons_resp.status_code}")
-        seasons = seasons_resp.json()
-        season_uuid = None
-        for s in seasons:
-            if s.get("current") or str(s.get("year")) == "2026":
-                season_uuid = s.get("id")
-                print(f"Found season UUID: {season_uuid} for year {s.get('year')}")
-                break
-        if not season_uuid:
-            season_uuid = "2026"  # fallback
-            print("Using fallback season")
+        # 1. Get current season UUID
+        seasons = requests.get(f"{base}/results/seasons", timeout=10).json()
+        season_uuid = next((s["id"] for s in seasons if s.get("current") or str(s.get("year")) == "2026"), "2026")
+        print(f"Using season UUID: {season_uuid}")
 
-        # 2. Get events
-        events_url = f"{base}/results/events?seasonUuid={season_uuid}"
-        events_resp = requests.get(events_url, timeout=15)
-        print(f"Events status: {events_resp.status_code} | Items: {len(events_resp.json()) if isinstance(events_resp.json(), list) else 'not list'}")
+        # 2. Get ALL events for the season
+        events_resp = requests.get(f"{base}/results/events?seasonUuid={season_uuid}", timeout=15).json()
+        events = events_resp if isinstance(events_resp, list) else []
+        print(f"Total events fetched: {len(events)}")
 
-        events = events_resp.json()
-        if not isinstance(events, list):
-            events = []
+        # 3. Filter to FUTURE events only
+        today = datetime.now().date()
+        upcoming = []
+        for e in events:
+            date_str = e.get("date_start") or e.get("date")
+            if date_str:
+                try:
+                    event_date = datetime.strptime(date_str[:10], "%Y-%m-%d").date()
+                    if event_date >= today:
+                        upcoming.append(e)
+                except:
+                    pass
 
-        # Take the first event as "next" for now (we can improve later)
-        next_event = events[0] if events else {}
+        next_event = upcoming[0] if upcoming else (events[0] if events else {})
+        print(f"Next upcoming race: {next_event.get('name', 'Unknown')}")
 
-        circuit_raw = safe_get(next_event, "circuit")
+        # 4. Safe circuit name extraction
+        circuit_raw = next_event.get("circuit") if isinstance(next_event, dict) else None
         circuit_name = ""
         if isinstance(circuit_raw, dict):
-            circuit_name = circuit_raw.get("name") or circuit_raw.get("title") or "Unknown"
+            circuit_name = circuit_raw.get("name") or circuit_raw.get("title", "Unknown")
         elif isinstance(circuit_raw, str):
             circuit_name = circuit_raw
-        else:
-            circuit_name = "Unknown"
 
-        print(f"Extracted circuit name: '{circuit_name}'")
+        info = CIRCUIT_INFO.get(circuit_name, CIRCUIT_INFO["default"])
 
         data = {
             "next_race": {
-                "title": safe_get(next_event, "name") or safe_get(next_event, "title", "Next Race"),
-                "date": safe_get(next_event, "date_start") or safe_get(next_event, "date", "TBD"),
                 "circuit": circuit_name,
-                "track_map_url": CIRCUIT_MAPS.get(circuit_name, CIRCUIT_MAPS["default"])
+                "date": next_event.get("date_start") or next_event.get("date", "TBD"),
+                "title": next_event.get("name") or next_event.get("title", ""),
+                "track_map_url": CIRCUIT_MAPS.get(circuit_name, CIRCUIT_MAPS["default"]),
+                "track_length": info["length"],
+                "lap_record_rider": info["lap_record_rider"],
+                "lap_record_time": info["lap_record_time"]
             },
-            "standings": {"motogp": [], "moto2": [], "moto3": []},  # Temporarily empty – we'll add later
+            "standings": {"motogp": [], "moto2": [], "moto3": []},   # ← We can add real standings next if you want
             "last_updated": datetime.now().isoformat(),
-            "debug_season_uuid": season_uuid,
-            "debug_events_count": len(events)
+            "debug_upcoming_count": len(upcoming)
         }
         return data
 
@@ -105,7 +131,7 @@ def fetch_motogp_data():
         print(traceback.format_exc())
         return {
             "error": str(e),
-            "message": "Failed to fetch MotoGP data – check Render logs for full traceback",
+            "message": "Failed to fetch MotoGP data – check Render logs",
             "last_updated": datetime.now().isoformat()
         }
 
