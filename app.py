@@ -6,11 +6,9 @@ import time
 app = Flask(__name__)
 
 CACHE = {"data": None, "timestamp": 0}
-CACHE_TTL = 900  # 15 minutes cache
+CACHE_TTL = 900
 
-# ===================================================================
-# 1. FULL CIRCUIT MAPS (Wikipedia images)
-# ===================================================================
+# CIRCUIT_MAPS and CIRCUIT_INFO stay exactly the same (no changes needed)
 CIRCUIT_MAPS = {
     "Chang International Circuit": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9f/Buriram_International_Circuit.svg/800px-Buriram_International_Circuit.svg.png",
     "Autódromo Internacional Ayrton Senna": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/Aut%C3%B3dromo_Internacional_Ayrton_Senna_%28Goi%C3%A2nia%29.svg/800px-Aut%C3%B3dromo_Internacional_Ayrton_Senna_%28Goi%C3%A2nia%29.svg.png",
@@ -38,9 +36,6 @@ CIRCUIT_MAPS = {
     "default": "https://via.placeholder.com/400x200/333/fff?text=Track+Map+Coming+Soon"
 }
 
-# ===================================================================
-# 2. FULL CIRCUIT INFO - Track length + Lap Record for all 22 circuits
-# ===================================================================
 CIRCUIT_INFO = {
     "Chang International Circuit": {"length": "4.554", "lap_record_rider": "Marco Bezzecchi", "lap_record_time": "1:28.526"},
     "Autódromo Internacional Ayrton Senna": {"length": "3.820", "lap_record_rider": "Marco Bezzecchi", "lap_record_time": "1:17.408"},
@@ -69,25 +64,21 @@ CIRCUIT_INFO = {
 }
 
 def normalize_circuit_name(name):
-    """Fixes the exact difference between API and our dictionary"""
     if not name:
         return "default"
-    name = name.replace(" - ", " – ")   # regular hyphen → en-dash
+    name = name.replace(" - ", " – ")
     name = name.strip()
     return name
 
 def fetch_motogp_data():
     base = "https://api.motogp.pulselive.com/motogp/v1"
     try:
-        # Get season UUID
         seasons = requests.get(f"{base}/results/seasons", timeout=10).json()
         season_uuid = next((s["id"] for s in seasons if s.get("current") or str(s.get("year")) == "2026"), "2026")
 
-        # Get events
         events_resp = requests.get(f"{base}/results/events?seasonUuid={season_uuid}", timeout=15).json()
         events = events_resp if isinstance(events_resp, list) else []
 
-        # Find next upcoming race
         today = datetime.now().date()
         upcoming = []
         for e in events:
@@ -102,7 +93,6 @@ def fetch_motogp_data():
 
         next_event = upcoming[0] if upcoming else (events[0] if events else {})
 
-        # Safe circuit name
         circuit_raw = next_event.get("circuit") if isinstance(next_event, dict) else None
         circuit_name = ""
         if isinstance(circuit_raw, dict):
@@ -130,10 +120,11 @@ def fetch_motogp_data():
         return data
 
     except Exception as e:
-        print(f"CRITICAL ERROR: {str(e)}")
         return {"error": str(e), "message": "Check Render logs", "last_updated": datetime.now().isoformat()}
 
+# NEW: Serve data at BOTH /motogp AND the root URL (this fixes the 404 in TRMNL)
 @app.route("/motogp")
+@app.route("/")
 def motogp():
     if time.time() - CACHE["timestamp"] > CACHE_TTL or not CACHE["data"]:
         CACHE["data"] = fetch_motogp_data()
