@@ -8,7 +8,7 @@ app = Flask(__name__)
 CACHE = {"data": None, "timestamp": 0}
 CACHE_TTL = 900  # 15 minutes
 
-# Circuit map dictionary – covers all 2026 MotoGP circuits
+# Full 2026 circuit maps (Wikipedia links – they dither well on TRMNL)
 CIRCUIT_MAPS = {
     "Chang International Circuit": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9f/Buriram_International_Circuit.svg/800px-Buriram_International_Circuit.svg.png",
     "Autódromo Internacional Ayrton Senna": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/Aut%C3%B3dromo_Internacional_Ayrton_Senna_%28Goi%C3%A2nia%29.svg/800px-Aut%C3%B3dromo_Internacional_Ayrton_Senna_%28Goi%C3%A2nia%29.svg.png",
@@ -18,7 +18,7 @@ CIRCUIT_MAPS = {
     "Bugatti Circuit": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9f/Bugatti_Circuit.svg/800px-Bugatti_Circuit.svg.png",
     "Circuit de Barcelona-Catalunya": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9f/Circuit_de_Barcelona-Catalunya.svg/800px-Circuit_de_Barcelona-Catalunya.svg.png",
     "Autodromo Internazionale del Mugello": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Mugello_track_map.svg/800px-Mugello_track_map.svg.png",
-    "Balaton Park Circuit": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8f/Balaton_Park_Circuit.svg/800px-Balaton_Park_Circuit.svg.png",  # may need verification if image changes
+    "Balaton Park Circuit": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8f/Balaton_Park_Circuit.svg/800px-Balaton_Park_Circuit.svg.png",
     "Brno Circuit": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Brno_Circuit.svg/800px-Brno_Circuit.svg.png",
     "TT Circuit Assen": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/TT_Circuit_Assen.svg/800px-TT_Circuit_Assen.svg.png",
     "Sachsenring": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Sachsenring.svg/800px-Sachsenring.svg.png",
@@ -33,67 +33,76 @@ CIRCUIT_MAPS = {
     "Algarve International Circuit": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9f/Portimao_track_map.svg/800px-Portimao_track_map.svg.png",
     "Circuit Ricardo Tormo": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Circuit_Ricardo_Tormo.svg/800px-Circuit_Ricardo_Tormo.svg.png",
 
-    # Fallback for any unknown circuit name
     "default": "https://via.placeholder.com/400x200/333/fff?text=Track+Map+Coming+Soon"
 }
 
-def get_current_season_year():
+def get_current_season():
     try:
-        seasons = requests.get("https://api.motogp.pulselive.com/motogp/v1/results/seasons").json()
+        resp = requests.get("https://api.motogp.pulselive.com/motogp/v1/results/seasons", timeout=10)
+        seasons = resp.json()
         for s in seasons:
-            if s.get("current") or s.get("year") == datetime.now().year:
-                return s.get("year")
-        return datetime.now().year  # fallback to current year
+            if s.get("current") or str(s.get("year")) == str(datetime.now().year):
+                return s.get("id")  # Use season UUID for better compatibility
+        return None
     except:
-        return 2026  # fallback for now
+        return None
+
+def safe_circuit_name(event):
+    """Safely extract circuit name whether it's a string or a dict"""
+    if not event:
+        return "Unknown"
+    circuit = event.get("circuit")
+    if isinstance(circuit, dict):
+        return circuit.get("name") or "Unknown"
+    elif isinstance(circuit, str):
+        return circuit
+    return "Unknown"
 
 def fetch_motogp_data():
-    season_year = get_current_season_year()
+    season_uuid = get_current_season() or "2026"  # fallback
     base = "https://api.motogp.pulselive.com/motogp/v1"
 
     try:
-        print(f"Fetching data for season {season_year}")  # visible in Render logs
+        print(f"Fetching data for season UUID: {season_uuid}")
 
-        # Get upcoming events
-        events_url = f"{base}/results/events?season={season_year}"
-        events_resp = requests.get(events_url, timeout=10).json()
-        
-        # Filter for upcoming (or use status if available)
-        upcoming = [e for e in events_resp if not e.get("finished", False) and not e.get("completed", False)]
-        next_event = upcoming[0] if upcoming else events_resp[0] if events_resp else {}
+        # Events
+        events_url = f"{base}/results/events?season={season_uuid}"
+        events_resp = requests.get(events_url, timeout=15).json()
+        print(f"Events fetched: {len(events_resp)} items")
 
-        # Get standings (this endpoint may need adjustment)
-        standings_url = f"{base}/results/standings?season={season_year}"
-        standings_resp = requests.get(standings_url, timeout=10).json()
+        # Find next/upcoming event (simple filter)
+        upcoming = [e for e in events_resp if not e.get("finished", False)]
+        next_event = upcoming[0] if upcoming else (events_resp[0] if events_resp else {})
 
-        # Build simplified data
+        circuit_name = safe_circuit_name(next_event)
+
+        # Standings (try with season UUID)
+        standings_url = f"{base}/results/standings?season={season_uuid}"
+        standings_resp = requests.get(standings_url, timeout=15).json()
+
         data = {
             "next_race": {
                 "title": next_event.get("name") or next_event.get("title", "Next Race"),
                 "date": next_event.get("date_start") or next_event.get("date", "TBD"),
-                "circuit": next_event.get("circuit", {}).get("name") or next_event.get("circuit_name", "Unknown"),
-                "track_map_url": CIRCUIT_MAPS.get(
-                    next_event.get("circuit", {}).get("name") or next_event.get("circuit_name"), 
-                    CIRCUIT_MAPS["default"]
-                )
+                "circuit": circuit_name,
+                "track_map_url": CIRCUIT_MAPS.get(circuit_name, CIRCUIT_MAPS["default"])
             },
             "standings": {
-                "motogp": [r for r in standings_resp if r.get("category") in ["MotoGP", "motogp"]][:8],
-                "moto2": [r for r in standings_resp if r.get("category") in ["Moto2", "moto2"]][:6],
-                "moto3": [r for r in standings_resp if r.get("category") in ["Moto3", "moto3"]][:6]
+                "motogp": [r for r in standings_resp if str(r.get("category", "")).lower() == "motogp"][:8],
+                "moto2": [r for r in standings_resp if str(r.get("category", "")).lower() == "moto2"][:6],
+                "moto3": [r for r in standings_resp if str(r.get("category", "")).lower() == "moto3"][:6]
             },
             "last_updated": datetime.now().isoformat(),
-            "season": season_year
+            "season": season_uuid
         }
         return data
 
     except Exception as e:
-        print(f"Error fetching MotoGP data: {str(e)}")  # This will show in Render Logs
+        print(f"ERROR fetching MotoGP data: {str(e)}")  # Visible in Render Logs
         return {
             "error": str(e),
-            "message": "Failed to fetch from MotoGP API - check Render logs for details",
-            "last_updated": datetime.now().isoformat(),
-            "season": season_year
+            "message": "Failed to fetch from MotoGP API – check Render logs",
+            "last_updated": datetime.now().isoformat()
         }
 
 @app.route("/motogp")
