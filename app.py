@@ -8,7 +8,7 @@ app = Flask(__name__)
 CACHE = {"data": None, "timestamp": 0}
 CACHE_TTL = 900  # 15 minutes
 
-# Full 2026 circuit maps (Wikipedia links – they dither well on TRMNL)
+# Your full circuit maps (keep this as-is)
 CIRCUIT_MAPS = {
     "Chang International Circuit": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9f/Buriram_International_Circuit.svg/800px-Buriram_International_Circuit.svg.png",
     "Autódromo Internacional Ayrton Senna": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/Aut%C3%B3dromo_Internacional_Ayrton_Senna_%28Goi%C3%A2nia%29.svg/800px-Aut%C3%B3dromo_Internacional_Ayrton_Senna_%28Goi%C3%A2nia%29.svg.png",
@@ -36,72 +36,76 @@ CIRCUIT_MAPS = {
     "default": "https://via.placeholder.com/400x200/333/fff?text=Track+Map+Coming+Soon"
 }
 
-def get_current_season():
-    try:
-        resp = requests.get("https://api.motogp.pulselive.com/motogp/v1/results/seasons", timeout=10)
-        seasons = resp.json()
-        for s in seasons:
-            if s.get("current") or str(s.get("year")) == str(datetime.now().year):
-                return s.get("id")  # Use season UUID for better compatibility
-        return None
-    except:
-        return None
-
-def safe_circuit_name(event):
-    """Safely extract circuit name whether it's a string or a dict"""
-    if not event:
-        return "Unknown"
-    circuit = event.get("circuit")
-    if isinstance(circuit, dict):
-        return circuit.get("name") or "Unknown"
-    elif isinstance(circuit, str):
-        return circuit
-    return "Unknown"
+def safe_get(obj, key, default=None):
+    """Safe way to get value whether obj is dict or not"""
+    if isinstance(obj, dict):
+        return obj.get(key, default)
+    return default
 
 def fetch_motogp_data():
-    season_uuid = get_current_season() or "2026"  # fallback
     base = "https://api.motogp.pulselive.com/motogp/v1"
 
     try:
-        print(f"Fetching data for season UUID: {season_uuid}")
+        print("=== Starting MotoGP data fetch ===")
 
-        # Events
-        events_url = f"{base}/results/events?season={season_uuid}"
-        events_resp = requests.get(events_url, timeout=15).json()
-        print(f"Events fetched: {len(events_resp)} items")
+        # 1. Get seasons to find current season UUID
+        seasons_resp = requests.get(f"{base}/results/seasons", timeout=10)
+        print(f"Seasons status: {seasons_resp.status_code}")
+        seasons = seasons_resp.json()
+        season_uuid = None
+        for s in seasons:
+            if s.get("current") or str(s.get("year")) == "2026":
+                season_uuid = s.get("id")
+                print(f"Found season UUID: {season_uuid} for year {s.get('year')}")
+                break
+        if not season_uuid:
+            season_uuid = "2026"  # fallback
+            print("Using fallback season")
 
-        # Find next/upcoming event (simple filter)
-        upcoming = [e for e in events_resp if not e.get("finished", False)]
-        next_event = upcoming[0] if upcoming else (events_resp[0] if events_resp else {})
+        # 2. Get events
+        events_url = f"{base}/results/events?seasonUuid={season_uuid}"
+        events_resp = requests.get(events_url, timeout=15)
+        print(f"Events status: {events_resp.status_code} | Items: {len(events_resp.json()) if isinstance(events_resp.json(), list) else 'not list'}")
 
-        circuit_name = safe_circuit_name(next_event)
+        events = events_resp.json()
+        if not isinstance(events, list):
+            events = []
 
-        # Standings (try with season UUID)
-        standings_url = f"{base}/results/standings?season={season_uuid}"
-        standings_resp = requests.get(standings_url, timeout=15).json()
+        # Take the first event as "next" for now (we can improve later)
+        next_event = events[0] if events else {}
+
+        circuit_raw = safe_get(next_event, "circuit")
+        circuit_name = ""
+        if isinstance(circuit_raw, dict):
+            circuit_name = circuit_raw.get("name") or circuit_raw.get("title") or "Unknown"
+        elif isinstance(circuit_raw, str):
+            circuit_name = circuit_raw
+        else:
+            circuit_name = "Unknown"
+
+        print(f"Extracted circuit name: '{circuit_name}'")
 
         data = {
             "next_race": {
-                "title": next_event.get("name") or next_event.get("title", "Next Race"),
-                "date": next_event.get("date_start") or next_event.get("date", "TBD"),
+                "title": safe_get(next_event, "name") or safe_get(next_event, "title", "Next Race"),
+                "date": safe_get(next_event, "date_start") or safe_get(next_event, "date", "TBD"),
                 "circuit": circuit_name,
                 "track_map_url": CIRCUIT_MAPS.get(circuit_name, CIRCUIT_MAPS["default"])
             },
-            "standings": {
-                "motogp": [r for r in standings_resp if str(r.get("category", "")).lower() == "motogp"][:8],
-                "moto2": [r for r in standings_resp if str(r.get("category", "")).lower() == "moto2"][:6],
-                "moto3": [r for r in standings_resp if str(r.get("category", "")).lower() == "moto3"][:6]
-            },
+            "standings": {"motogp": [], "moto2": [], "moto3": []},  # Temporarily empty – we'll add later
             "last_updated": datetime.now().isoformat(),
-            "season": season_uuid
+            "debug_season_uuid": season_uuid,
+            "debug_events_count": len(events)
         }
         return data
 
     except Exception as e:
-        print(f"ERROR fetching MotoGP data: {str(e)}")  # Visible in Render Logs
+        print(f"CRITICAL ERROR: {str(e)}")
+        import traceback
+        print(traceback.format_exc())
         return {
             "error": str(e),
-            "message": "Failed to fetch from MotoGP API – check Render logs",
+            "message": "Failed to fetch MotoGP data – check Render logs for full traceback",
             "last_updated": datetime.now().isoformat()
         }
 
