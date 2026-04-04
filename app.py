@@ -9,7 +9,7 @@ CACHE = {"data": None, "timestamp": 0}
 CACHE_TTL = 900  # 15 minutes cache
 
 # ===================================================================
-# 1. FULL CIRCUIT MAPS (Wikipedia images - already working)
+# 1. FULL CIRCUIT MAPS (Wikipedia images)
 # ===================================================================
 CIRCUIT_MAPS = {
     "Chang International Circuit": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9f/Buriram_International_Circuit.svg/800px-Buriram_International_Circuit.svg.png",
@@ -68,6 +68,16 @@ CIRCUIT_INFO = {
     "default": {"length": "N/A", "lap_record_rider": "TBD", "lap_record_time": "TBD"}
 }
 
+def normalize_circuit_name(name):
+    """Fix small differences from the API (hyphens, accents, spacing)"""
+    if not name:
+        return "default"
+    name = name.replace(" - ", " – ")          # fix hyphen
+    name = name.replace("Á", "A")              # fix Ángel
+    name = name.replace("á", "a")
+    name = name.strip()
+    return name
+
 def fetch_motogp_data():
     base = "https://api.motogp.pulselive.com/motogp/v1"
     try:
@@ -76,12 +86,10 @@ def fetch_motogp_data():
         # 1. Get current season UUID
         seasons = requests.get(f"{base}/results/seasons", timeout=10).json()
         season_uuid = next((s["id"] for s in seasons if s.get("current") or str(s.get("year")) == "2026"), "2026")
-        print(f"Using season UUID: {season_uuid}")
 
-        # 2. Get ALL events for the season
+        # 2. Get ALL events
         events_resp = requests.get(f"{base}/results/events?seasonUuid={season_uuid}", timeout=15).json()
         events = events_resp if isinstance(events_resp, list) else []
-        print(f"Total events fetched: {len(events)}")
 
         # 3. Filter to FUTURE events only
         today = datetime.now().date()
@@ -97,9 +105,8 @@ def fetch_motogp_data():
                     pass
 
         next_event = upcoming[0] if upcoming else (events[0] if events else {})
-        print(f"Next upcoming race: {next_event.get('name', 'Unknown')}")
 
-        # 4. Safe circuit name extraction
+        # 4. Safe circuit name + normalization
         circuit_raw = next_event.get("circuit") if isinstance(next_event, dict) else None
         circuit_name = ""
         if isinstance(circuit_raw, dict):
@@ -107,19 +114,20 @@ def fetch_motogp_data():
         elif isinstance(circuit_raw, str):
             circuit_name = circuit_raw
 
-        info = CIRCUIT_INFO.get(circuit_name, CIRCUIT_INFO["default"])
+        clean_name = normalize_circuit_name(circuit_name)
+        info = CIRCUIT_INFO.get(clean_name, CIRCUIT_INFO["default"])
 
         data = {
             "next_race": {
-                "circuit": circuit_name,
+                "circuit": circuit_name,           # keep original for display
                 "date": next_event.get("date_start") or next_event.get("date", "TBD"),
                 "title": next_event.get("name") or next_event.get("title", ""),
-                "track_map_url": CIRCUIT_MAPS.get(circuit_name, CIRCUIT_MAPS["default"]),
+                "track_map_url": CIRCUIT_MAPS.get(clean_name, CIRCUIT_MAPS["default"]),
                 "track_length": info["length"],
                 "lap_record_rider": info["lap_record_rider"],
                 "lap_record_time": info["lap_record_time"]
             },
-            "standings": {"motogp": [], "moto2": [], "moto3": []},   # ← We can add real standings next if you want
+            "standings": {"motogp": [], "moto2": [], "moto3": []},
             "last_updated": datetime.now().isoformat(),
             "debug_upcoming_count": len(upcoming)
         }
@@ -129,11 +137,7 @@ def fetch_motogp_data():
         print(f"CRITICAL ERROR: {str(e)}")
         import traceback
         print(traceback.format_exc())
-        return {
-            "error": str(e),
-            "message": "Failed to fetch MotoGP data – check Render logs",
-            "last_updated": datetime.now().isoformat()
-        }
+        return {"error": str(e), "message": "Check Render logs", "last_updated": datetime.now().isoformat()}
 
 @app.route("/motogp")
 def motogp():
