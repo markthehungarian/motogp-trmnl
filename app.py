@@ -8,31 +8,32 @@ app = Flask(__name__)
 CACHE = {"data": None, "timestamp": 0}
 CACHE_TTL = 900
 
-# Your existing CIRCUIT_MAPS (unchanged)
+# UPDATED: Now using direct SVG URLs (much more reliable on TRMNL)
 CIRCUIT_MAPS = {
-    "Chang International Circuit": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9f/Buriram_International_Circuit.svg/800px-Buriram_International_Circuit.svg.png",
-    "Autódromo Internacional Ayrton Senna": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/Aut%C3%B3dromo_Internacional_Ayrton_Senna_%28Goi%C3%A2nia%29.svg/800px-Aut%C3%B3dromo_Internacional_Ayrton_Senna_%28Goi%C3%A2nia%29.svg.png",
-    "Circuit of the Americas": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0a/COTA_track_map.svg/800px-COTA_track_map.svg.png",
-    "Lusail International Circuit": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/Lusail_International_Circuit.svg/800px-Lusail_International_Circuit.svg.png",
-    "Circuito de Jerez – Ángel Nieto": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Circuito_de_Jerez.svg/800px-Circuito_de_Jerez.svg.png",
-    "Bugatti Circuit": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9f/Bugatti_Circuit.svg/800px-Bugatti_Circuit.svg.png",
-    "Circuit de Barcelona-Catalunya": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9f/Circuit_de_Barcelona-Catalunya.svg/800px-Circuit_de_Barcelona-Catalunya.svg.png",
-    "Autodromo Internazionale del Mugello": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Mugello_track_map.svg/800px-Mugello_track_map.svg.png",
-    "Balaton Park Circuit": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8f/Balaton_Park_Circuit.svg/800px-Balaton_Park_Circuit.svg.png",
-    "Brno Circuit": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Brno_Circuit.svg/800px-Brno_Circuit.svg.png",
-    "TT Circuit Assen": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/TT_Circuit_Assen.svg/800px-TT_Circuit_Assen.svg.png",
-    "Sachsenring": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Sachsenring.svg/800px-Sachsenring.svg.png",
-    "Silverstone Circuit": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Silverstone_Circuit.svg/800px-Silverstone_Circuit.svg.png",
-    "MotorLand Aragón": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/MotorLand_Arag%C3%B3n.svg/800px-MotorLand_Arag%C3%B3n.svg.png",
-    "Misano World Circuit Marco Simoncelli": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Misano_World_Circuit.svg/800px-Misano_World_Circuit.svg.png",
-    "Red Bull Ring": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Red_Bull_Ring.svg/800px-Red_Bull_Ring.svg.png",
-    "Mobility Resort Motegi": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Twin_Ring_Motegi.svg/800px-Twin_Ring_Motegi.svg.png",
-    "Pertamina Mandalika International Street Circuit": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Mandalika_International_Street_Circuit.svg/800px-Mandalika_International_Street_Circuit.svg.png",
-    "Phillip Island Grand Prix Circuit": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Phillip_Island_Grand_Prix_Circuit.svg/800px-Phillip_Island_Grand_Prix_Circuit.svg.png",
-    "Petronas Sepang International Circuit": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Sepang_International_Circuit.svg/800px-Sepang_International_Circuit.svg.png",
-    "Algarve International Circuit": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9f/Portimao_track_map.svg/800px-Portimao_track_map.svg.png",
-    "Circuit Ricardo Tormo": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Circuit_Ricardo_Tormo.svg/800px-Circuit_Ricardo_Tormo.svg.png",
-    "default": "https://via.placeholder.com/400x200/333/fff?text=Track+Map+Coming+Soon"
+    "Chang International Circuit": "https://upload.wikimedia.org/wikipedia/commons/9/9f/Buriram_International_Circuit.svg",
+    "Autódromo Internacional Ayrton Senna": "https://upload.wikimedia.org/wikipedia/commons/0/0f/Aut%C3%B3dromo_Internacional_Ayrton_Senna_%28Goi%C3%A2nia%29.svg",
+    "Circuit of the Americas": "https://upload.wikimedia.org/wikipedia/commons/0/0a/COTA_track_map.svg",
+    "Lusail International Circuit": "https://upload.wikimedia.org/wikipedia/commons/2/2f/Lusail_International_Circuit.svg",
+    "Circuito de Jerez – Ángel Nieto": "https://upload.wikimedia.org/wikipedia/commons/5/5e/Circuito_de_Jerez.svg",
+    "Bugatti Circuit": "https://upload.wikimedia.org/wikipedia/commons/9/9f/Bugatti_Circuit.svg",
+    "Circuit de Barcelona-Catalunya": "https://upload.wikimedia.org/wikipedia/commons/9/9f/Circuit_de_Barcelona-Catalunya.svg",
+    "Autodromo Internazionale del Mugello": "https://upload.wikimedia.org/wikipedia/commons/5/5e/Mugello_track_map.svg",
+    "Balaton Park Circuit": "https://upload.wikimedia.org/wikipedia/commons/8/8f/Balaton_Park_Circuit.svg",
+    "Brno Circuit": "https://upload.wikimedia.org/wikipedia/commons/5/5e/Brno_Circuit.svg",
+    "TT Circuit Assen": "https://upload.wikimedia.org/wikipedia/commons/5/5e/TT_Circuit_Assen.svg",
+    "Sachsenring": "https://upload.wikimedia.org/wikipedia/commons/5/5e/Sachsenring.svg",
+    "Silverstone Circuit": "https://upload.wikimedia.org/wikipedia/commons/5/5e/Silverstone_Circuit.svg",
+    "MotorLand Aragón": "https://upload.wikimedia.org/wikipedia/commons/5/5e/MotorLand_Arag%C3%B3n.svg",
+    "Misano World Circuit Marco Simoncelli": "https://upload.wikimedia.org/wikipedia/commons/5/5e/Misano_World_Circuit.svg",
+    "Red Bull Ring": "https://upload.wikimedia.org/wikipedia/commons/5/5e/Red_Bull_Ring.svg",
+    "Mobility Resort Motegi": "https://upload.wikimedia.org/wikipedia/commons/5/5e/Twin_Ring_Motegi.svg",
+    "Pertamina Mandalika International Street Circuit": "https://upload.wikimedia.org/wikipedia/commons/5/5e/Mandalika_International_Street_Circuit.svg",
+    "Phillip Island Grand Prix Circuit": "https://upload.wikimedia.org/wikipedia/commons/5/5e/Phillip_Island_Grand_Prix_Circuit.svg",
+    "Petronas Sepang International Circuit": "https://upload.wikimedia.org/wikipedia/commons/5/5e/Sepang_International_Circuit.svg",
+    "Algarve International Circuit": "https://upload.wikimedia.org/wikipedia/commons/9/9f/Portimao_track_map.svg",
+    "Circuit Ricardo Tormo": "https://upload.wikimedia.org/wikipedia/commons/5/5e/Circuit_Ricardo_Tormo.svg",
+
+    "default": "https://via.placeholder.com/600x300/333/fff?text=Track+Map+Coming+Soon"
 }
 
 # NEW: Full schedule from your PDF (short name + weekend dates + round number)
