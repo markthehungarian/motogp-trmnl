@@ -8,7 +8,7 @@ app = Flask(__name__)
 CACHE = {"data": None, "timestamp": 0}
 CACHE_TTL = 900
 
-# CIRCUIT_MAPS and CIRCUIT_INFO stay exactly the same (no changes needed)
+# Your existing CIRCUIT_MAPS (unchanged)
 CIRCUIT_MAPS = {
     "Chang International Circuit": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9f/Buriram_International_Circuit.svg/800px-Buriram_International_Circuit.svg.png",
     "Autódromo Internacional Ayrton Senna": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/Aut%C3%B3dromo_Internacional_Ayrton_Senna_%28Goi%C3%A2nia%29.svg/800px-Aut%C3%B3dromo_Internacional_Ayrton_Senna_%28Goi%C3%A2nia%29.svg.png",
@@ -32,35 +32,34 @@ CIRCUIT_MAPS = {
     "Petronas Sepang International Circuit": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Sepang_International_Circuit.svg/800px-Sepang_International_Circuit.svg.png",
     "Algarve International Circuit": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9f/Portimao_track_map.svg/800px-Portimao_track_map.svg.png",
     "Circuit Ricardo Tormo": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Circuit_Ricardo_Tormo.svg/800px-Circuit_Ricardo_Tormo.svg.png",
-
     "default": "https://via.placeholder.com/400x200/333/fff?text=Track+Map+Coming+Soon"
 }
 
-CIRCUIT_INFO = {
-    "Chang International Circuit": {"length": "4.554", "lap_record_rider": "Marco Bezzecchi", "lap_record_time": "1:28.526"},
-    "Autódromo Internacional Ayrton Senna": {"length": "3.820", "lap_record_rider": "Marco Bezzecchi", "lap_record_time": "1:17.408"},
-    "Circuit of the Americas": {"length": "5.513", "lap_record_rider": "Fabio di Giannantonio", "lap_record_time": "2:00.864"},
-    "Lusail International Circuit": {"length": "5.380", "lap_record_rider": "Francesco Bagnaia", "lap_record_time": "1:52.000"},
-    "Circuito de Jerez – Ángel Nieto": {"length": "4.423", "lap_record_rider": "Jorge Martín", "lap_record_time": "1:36.405"},
-    "Bugatti Circuit": {"length": "4.185", "lap_record_rider": "Jorge Martín", "lap_record_time": "1:31.232"},
-    "Circuit de Barcelona-Catalunya": {"length": "4.657", "lap_record_rider": "Aleix Espargaró", "lap_record_time": "1:38.190"},
-    "Autodromo Internazionale del Mugello": {"length": "5.245", "lap_record_rider": "Francesco Bagnaia", "lap_record_time": "1:45.519"},
-    "Balaton Park Circuit": {"length": "4.115", "lap_record_rider": "TBD", "lap_record_time": "TBD"},
-    "Brno Circuit": {"length": "5.403", "lap_record_rider": "Francesco Bagnaia", "lap_record_time": "1:52.303"},
-    "TT Circuit Assen": {"length": "4.542", "lap_record_rider": "Francesco Bagnaia", "lap_record_time": "1:31.500"},
-    "Sachsenring": {"length": "3.671", "lap_record_rider": "Jorge Martín", "lap_record_time": "1:19.071"},
-    "Silverstone Circuit": {"length": "5.891", "lap_record_rider": "Aleix Espargaró", "lap_record_time": "1:58.000"},
-    "MotorLand Aragón": {"length": "5.077", "lap_record_rider": "Marc Márquez", "lap_record_time": "1:46.000"},
-    "Misano World Circuit Marco Simoncelli": {"length": "4.226", "lap_record_rider": "Francesco Bagnaia", "lap_record_time": "1:31.000"},
-    "Red Bull Ring": {"length": "4.318", "lap_record_rider": "Francesco Bagnaia", "lap_record_time": "1:23.000"},
-    "Mobility Resort Motegi": {"length": "4.801", "lap_record_rider": "Francesco Bagnaia", "lap_record_time": "1:43.000"},
-    "Pertamina Mandalika International Street Circuit": {"length": "4.310", "lap_record_rider": "Jorge Martín", "lap_record_time": "1:30.000"},
-    "Phillip Island Grand Prix Circuit": {"length": "4.445", "lap_record_rider": "Marc Márquez", "lap_record_time": "1:27.000"},
-    "Petronas Sepang International Circuit": {"length": "5.543", "lap_record_rider": "Francesco Bagnaia", "lap_record_time": "1:57.000"},
-    "Algarve International Circuit": {"length": "4.592", "lap_record_rider": "Jorge Martín", "lap_record_time": "1:36.000"},
-    "Circuit Ricardo Tormo": {"length": "4.005", "lap_record_rider": "Francesco Bagnaia", "lap_record_time": "1:30.000"},
-
-    "default": {"length": "N/A", "lap_record_rider": "TBD", "lap_record_time": "TBD"}
+# NEW: Full schedule from your PDF (short name + weekend dates + round number)
+SCHEDULE = {
+    "Chang International Circuit": {"short_name": "BURIRAM (TL)", "weekend_date": "27 February – 1 March", "round": 1},
+    "Autódromo Internacional Ayrton Senna": {"short_name": "BRAZIL", "weekend_date": "20-22 March", "round": 2},
+    "Circuit of the Americas": {"short_name": "COTA (USA)", "weekend_date": "27-29 March", "round": 3},
+    "Lusail International Circuit": {"short_name": "LUSAIL (QT)", "weekend_date": "10-12 April", "round": 4},
+    "Circuito de Jerez – Ángel Nieto": {"short_name": "JEREZ (ES)", "weekend_date": "24-26 April", "round": 5},
+    "Bugatti Circuit": {"short_name": "LE MANS (FR)", "weekend_date": "8-10 May", "round": 6},
+    "Circuit de Barcelona-Catalunya": {"short_name": "CATALUNYA (ES)", "weekend_date": "15-17 May", "round": 7},
+    "Autodromo Internazionale del Mugello": {"short_name": "MUGELLO (IT)", "weekend_date": "29-31 May", "round": 8},
+    "Balaton Park Circuit": {"short_name": "BALATON PARK (HU)", "weekend_date": "5-7 June", "round": 9},
+    "Brno Circuit": {"short_name": "BRNO (CZ)", "weekend_date": "19-21 June", "round": 10},
+    "TT Circuit Assen": {"short_name": "ASSEN (NL)", "weekend_date": "26-28 June", "round": 11},
+    "Sachsenring": {"short_name": "SACHSENRING (D)", "weekend_date": "10-12 July", "round": 12},
+    "Silverstone Circuit": {"short_name": "SILVERSTONE (UK)", "weekend_date": "7-9 August", "round": 13},
+    "MotorLand Aragón": {"short_name": "ARAGON (ES)", "weekend_date": "28-30 August", "round": 14},
+    "Misano World Circuit Marco Simoncelli": {"short_name": "SAN MARINO", "weekend_date": "11-13 September", "round": 15},
+    "Red Bull Ring": {"short_name": "RED BULL RING (AT)", "weekend_date": "18-20 September", "round": 16},
+    "Mobility Resort Motegi": {"short_name": "MOTEGI (JP)", "weekend_date": "2-4 October", "round": 17},
+    "Pertamina Mandalika International Street Circuit": {"short_name": "INDONESIA", "weekend_date": "9-11 October", "round": 18},
+    "Phillip Island Grand Prix Circuit": {"short_name": "PHILLIP ISLAND (AU)", "weekend_date": "23-25 October", "round": 19},
+    "Petronas Sepang International Circuit": {"short_name": "SEPANG (ML)", "weekend_date": "30 October – 1 November", "round": 20},
+    "Algarve International Circuit": {"short_name": "PORTUGAL", "weekend_date": "13-15 November", "round": 21},
+    "Circuit Ricardo Tormo": {"short_name": "VALENCIA (ES)", "weekend_date": "20-22 November", "round": 22},
+    "default": {"short_name": "UNKNOWN", "weekend_date": "TBD", "round": 0}
 }
 
 def normalize_circuit_name(name):
@@ -101,30 +100,29 @@ def fetch_motogp_data():
             circuit_name = circuit_raw
 
         clean_name = normalize_circuit_name(circuit_name)
-        info = CIRCUIT_INFO.get(clean_name, CIRCUIT_INFO["default"])
+        info = SCHEDULE.get(clean_name, SCHEDULE["default"])
 
         data = {
             "next_race": {
                 "circuit": circuit_name,
-                "date": next_event.get("date_start") or next_event.get("date", "TBD"),
-                "title": next_event.get("name") or next_event.get("title", ""),
+                "short_name": info["short_name"],
+                "weekend_date": info["weekend_date"],
+                "round": info["round"],
                 "track_map_url": CIRCUIT_MAPS.get(clean_name, CIRCUIT_MAPS["default"]),
-                "track_length": info["length"],
-                "lap_record_rider": info["lap_record_rider"],
-                "lap_record_time": info["lap_record_time"]
+                "track_length": "4.423" if clean_name == "Circuito de Jerez – Ángel Nieto" else "N/A",  # you can expand later
+                "lap_record_rider": "Jorge Martín" if clean_name == "Circuito de Jerez – Ángel Nieto" else "TBD",
+                "lap_record_time": "1:36.405" if clean_name == "Circuito de Jerez – Ángel Nieto" else "TBD"
             },
             "standings": {"motogp": [], "moto2": [], "moto3": []},
-            "last_updated": datetime.now().isoformat(),
-            "debug_upcoming_count": len(upcoming)
+            "last_updated": datetime.now().isoformat()
         }
         return data
 
     except Exception as e:
-        return {"error": str(e), "message": "Check Render logs", "last_updated": datetime.now().isoformat()}
+        return {"error": str(e), "last_updated": datetime.now().isoformat()}
 
-# NEW: Serve data at BOTH /motogp AND the root URL (this fixes the 404 in TRMNL)
-@app.route("/motogp")
 @app.route("/")
+@app.route("/motogp")
 def motogp():
     if time.time() - CACHE["timestamp"] > CACHE_TTL or not CACHE["data"]:
         CACHE["data"] = fetch_motogp_data()
