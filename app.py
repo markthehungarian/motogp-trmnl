@@ -65,19 +65,19 @@ SCHEDULE = {
 # === STATIC STANDINGS - EDIT THESE YOURSELF ===
 STATIC_STANDINGS = {
     "motogp": [
-        {"position": 1, "rider_name": "Marco Bezzecchi", "points": 81},
-        {"position": 2, "rider_name": "Jorge Martín", "points": 77},
-        {"position": 3, "rider_name": "Francesco Bagnaia", "points": 70}
+        {"position": 1, "rider_name": "Bezzecchi", "points": 81},
+        {"position": 2, "rider_name": "Martín", "points": 77},
+        {"position": 3, "rider_name": "Bagnaia", "points": 70}
     ],
     "moto2": [
-        {"position": 1, "rider_name": "Arón Canet", "points": 65},
-        {"position": 2, "rider_name": "Manuel González", "points": 58},
-        {"position": 3, "rider_name": "Tony Arbolino", "points": 52}
+        {"position": 1, "rider_name": "Canet", "points": 65},
+        {"position": 2, "rider_name": "González", "points": 58},
+        {"position": 3, "rider_name": "Arbolino", "points": 52}
     ],
     "moto3": [
-        {"position": 1, "rider_name": "David Alonso", "points": 72},
-        {"position": 2, "rider_name": "Joel Kelso", "points": 61},
-        {"position": 3, "rider_name": "Tatsuki Suzuki", "points": 55}
+        {"position": 1, "rider_name": "Alonso", "points": 72},
+        {"position": 2, "rider_name": "Kelso", "points": 61},
+        {"position": 3, "rider_name": "Suzuki", "points": 55}
     ]
 }
 
