@@ -73,7 +73,6 @@ def normalize_circuit_name(name):
 def fetch_motogp_data():
     base = "https://api.motogp.pulselive.com/motogp/v1"
     try:
-        # Season & next race
         seasons = requests.get(f"{base}/results/seasons", timeout=10).json()
         season_uuid = next((s["id"] for s in seasons if s.get("current") or str(s.get("year")) == "2026"), "2026")
 
@@ -96,30 +95,31 @@ def fetch_motogp_data():
         clean_name = normalize_circuit_name(circuit_name)
         info = SCHEDULE.get(clean_name, SCHEDULE["default"])
 
-        # === IMPROVED STANDINGS PARSING ===
+        # === STANDINGS with full debug ===
         standings = {"motogp": [], "moto2": [], "moto3": []}
         try:
             standings_resp = requests.get(f"{base}/results/standings?seasonUuid={season_uuid}", timeout=15).json()
             standings_list = standings_resp if isinstance(standings_resp, list) else []
 
-            for entry in standings_list:
-                # Try multiple possible category keys the API might use
-                cat = str(entry.get("category", "")).lower().replace(" ", "")
-                if not cat and "class" in entry:
-                    cat = str(entry.get("class", "")).lower().replace(" ", "")
+            print("=== First 10 category values from API ===")
+            for i, entry in enumerate(standings_list[:10]):
+                cat = str(entry.get("category") or entry.get("class") or entry.get("categoryName") or "").strip()
+                print(f"Entry {i}: category = '{cat}'")
 
+            for entry in standings_list:
+                cat = str(entry.get("category") or entry.get("class") or entry.get("categoryName") or "").lower().replace(" ", "")
                 rider = entry.get("rider", {}) or {}
                 name = rider.get("name") or rider.get("full_name") or "Unknown Rider"
                 pos = entry.get("position", 0)
                 pts = entry.get("points", 0)
 
-                if any(x in cat for x in ["motogp", "moto gp"]):
+                if "motogp" in cat:
                     if len(standings["motogp"]) < 3:
                         standings["motogp"].append({"position": pos, "rider_name": name, "points": pts})
-                elif any(x in cat for x in ["moto2", "moto 2"]):
+                elif "moto2" in cat:
                     if len(standings["moto2"]) < 3:
                         standings["moto2"].append({"position": pos, "rider_name": name, "points": pts})
-                elif any(x in cat for x in ["moto3", "moto 3"]):
+                elif "moto3" in cat:
                     if len(standings["moto3"]) < 3:
                         standings["moto3"].append({"position": pos, "rider_name": name, "points": pts})
 
