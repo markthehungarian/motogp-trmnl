@@ -96,27 +96,34 @@ def fetch_motogp_data():
         clean_name = normalize_circuit_name(circuit_name)
         info = SCHEDULE.get(clean_name, SCHEDULE["default"])
 
-        # === REAL STANDINGS - more robust parsing ===
+        # === IMPROVED STANDINGS PARSING ===
         standings = {"motogp": [], "moto2": [], "moto3": []}
         try:
             standings_resp = requests.get(f"{base}/results/standings?seasonUuid={season_uuid}", timeout=15).json()
             standings_list = standings_resp if isinstance(standings_resp, list) else []
 
             for entry in standings_list:
+                # Try multiple possible category keys the API might use
                 cat = str(entry.get("category", "")).lower().replace(" ", "")
+                if not cat and "class" in entry:
+                    cat = str(entry.get("class", "")).lower().replace(" ", "")
+
                 rider = entry.get("rider", {}) or {}
                 name = rider.get("name") or rider.get("full_name") or "Unknown Rider"
                 pos = entry.get("position", 0)
                 pts = entry.get("points", 0)
 
-                if "motogp" in cat and len(standings["motogp"]) < 3:
-                    standings["motogp"].append({"position": pos, "rider_name": name, "points": pts})
-                elif "moto2" in cat and len(standings["moto2"]) < 3:
-                    standings["moto2"].append({"position": pos, "rider_name": name, "points": pts})
-                elif "moto3" in cat and len(standings["moto3"]) < 3:
-                    standings["moto3"].append({"position": pos, "rider_name": name, "points": pts})
+                if any(x in cat for x in ["motogp", "moto gp"]):
+                    if len(standings["motogp"]) < 3:
+                        standings["motogp"].append({"position": pos, "rider_name": name, "points": pts})
+                elif any(x in cat for x in ["moto2", "moto 2"]):
+                    if len(standings["moto2"]) < 3:
+                        standings["moto2"].append({"position": pos, "rider_name": name, "points": pts})
+                elif any(x in cat for x in ["moto3", "moto 3"]):
+                    if len(standings["moto3"]) < 3:
+                        standings["moto3"].append({"position": pos, "rider_name": name, "points": pts})
 
-            print(f"Standings loaded - MotoGP: {len(standings['motogp'])}, Moto2: {len(standings['moto2'])}, Moto3: {len(standings['moto3'])}")
+            print(f"Standings loaded → MotoGP: {len(standings['motogp'])}, Moto2: {len(standings['moto2'])}, Moto3: {len(standings['moto3'])}")
         except Exception as se:
             print(f"Standings fetch failed: {se}")
 
