@@ -1,5 +1,4 @@
 from flask import Flask, jsonify
-import requests
 from datetime import datetime
 import time
 
@@ -8,7 +7,7 @@ app = Flask(__name__)
 CACHE = {"data": None, "timestamp": 0}
 CACHE_TTL = 900
 
-# YOUR CUSTOM TRACK MAPS (from your GitHub repo)
+# YOUR CUSTOM TRACK MAPS
 CIRCUIT_MAPS = {
     "Chang International Circuit": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/buriram.png",
     "Autódromo Internacional Ayrton Senna": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/brazil.png",
@@ -63,6 +62,25 @@ SCHEDULE = {
     "default": {"short_name": "UNKNOWN", "weekend_date": "TBD", "round": 0}
 }
 
+# === STATIC STANDINGS - EDIT THESE YOURSELF ===
+STATIC_STANDINGS = {
+    "motogp": [
+        {"position": 1, "rider_name": "Marco Bezzecchi", "points": 81},
+        {"position": 2, "rider_name": "Jorge Martín", "points": 77},
+        {"position": 3, "rider_name": "Francesco Bagnaia", "points": 70}
+    ],
+    "moto2": [
+        {"position": 1, "rider_name": "Arón Canet", "points": 65},
+        {"position": 2, "rider_name": "Manuel González", "points": 58},
+        {"position": 3, "rider_name": "Tony Arbolino", "points": 52}
+    ],
+    "moto3": [
+        {"position": 1, "rider_name": "David Alonso", "points": 72},
+        {"position": 2, "rider_name": "Joel Kelso", "points": 61},
+        {"position": 3, "rider_name": "Tatsuki Suzuki", "points": 55}
+    ]
+}
+
 def normalize_circuit_name(name):
     if not name:
         return "default"
@@ -73,7 +91,6 @@ def normalize_circuit_name(name):
 def fetch_motogp_data():
     base = "https://api.motogp.pulselive.com/motogp/v1"
     try:
-        # Season & next race
         seasons = requests.get(f"{base}/results/seasons", timeout=10).json()
         season_uuid = next((s["id"] for s in seasons if s.get("current") or str(s.get("year")) == "2026"), "2026")
 
@@ -96,34 +113,6 @@ def fetch_motogp_data():
         clean_name = normalize_circuit_name(circuit_name)
         info = SCHEDULE.get(clean_name, SCHEDULE["default"])
 
-        # === REAL STANDINGS using the exact category UUIDs ===
-        standings = {"motogp": [], "moto2": [], "moto3": []}
-
-        # Hardcoded category UUIDs for 2026 season
-        cat_uuids = {
-            "motogp": "e8c110ad-64aa-4e8e-8a86-f2f152f6a942",
-            "moto2": "549640b8-fd9c-4245-acfd-60e4bc38b25c",
-            "moto3": "954f7e65-2ef2-4423-b949-4961cc603e45"
-        }
-
-        for cls, cat_uuid in cat_uuids.items():
-            try:
-                resp = requests.get(
-                    f"{base}/results/standings?seasonUuid={season_uuid}&categoryUuid={cat_uuid}",
-                    timeout=10
-                ).json()
-                entries = resp if isinstance(resp, list) else []
-                for entry in entries[:3]:
-                    rider = entry.get("rider", {}) or {}
-                    name = rider.get("name") or rider.get("full_name") or "Unknown Rider"
-                    pos = entry.get("position", 0)
-                    pts = entry.get("points", 0)
-                    standings[cls].append({"position": pos, "rider_name": name, "points": pts})
-            except Exception as se:
-                print(f"Standings fetch failed for {cls}: {se}")
-
-        print(f"Standings loaded → MotoGP: {len(standings['motogp'])}, Moto2: {len(standings['moto2'])}, Moto3: {len(standings['moto3'])}")
-
         data = {
             "next_race": {
                 "circuit": circuit_name,
@@ -135,13 +124,12 @@ def fetch_motogp_data():
                 "lap_record_rider": "Jorge Martín" if clean_name == "Circuito de Jerez – Ángel Nieto" else "TBD",
                 "lap_record_time": "1:36.405" if clean_name == "Circuito de Jerez – Ángel Nieto" else "TBD"
             },
-            "standings": standings,
+            "standings": STATIC_STANDINGS,   # ← Your manual data
             "last_updated": datetime.now().isoformat()
         }
         return data
 
     except Exception as e:
-        print(f"CRITICAL ERROR: {str(e)}")
         return {"error": str(e), "last_updated": datetime.now().isoformat()}
 
 @app.route("/")
