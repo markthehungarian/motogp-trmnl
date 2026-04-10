@@ -73,6 +73,7 @@ def normalize_circuit_name(name):
 def fetch_motogp_data():
     base = "https://api.motogp.pulselive.com/motogp/v1"
     try:
+        # Season & next race
         seasons = requests.get(f"{base}/results/seasons", timeout=10).json()
         season_uuid = next((s["id"] for s in seasons if s.get("current") or str(s.get("year")) == "2026"), "2026")
 
@@ -95,33 +96,31 @@ def fetch_motogp_data():
         clean_name = normalize_circuit_name(circuit_name)
         info = SCHEDULE.get(clean_name, SCHEDULE["default"])
 
-        # === STANDINGS with full debug ===
+        # === REAL STANDINGS - fetch categories first, then standings per category ===
         standings = {"motogp": [], "moto2": [], "moto3": []}
         try:
-            standings_resp = requests.get(f"{base}/results/standings?seasonUuid={season_uuid}", timeout=15).json()
-            standings_list = standings_resp if isinstance(standings_resp, list) else []
+            # 1. Get category UUIDs
+            cats_resp = requests.get(f"{base}/results/categories?seasonUuid={season_uuid}", timeout=10).json()
+            cat_map = {}
+            for c in cats_resp if isinstance(cats_resp, list) else []:
+                name = str(c.get("name", "")).lower()
+                if "motogp" in name:
+                    cat_map["motogp"] = c.get("id")
+                elif "moto2" in name:
+                    cat_map["moto2"] = c.get("id")
+                elif "moto3" in name:
+                    cat_map["moto3"] = c.get("id")
 
-            print("=== First 10 category values from API ===")
-            for i, entry in enumerate(standings_list[:10]):
-                cat = str(entry.get("category") or entry.get("class") or entry.get("categoryName") or "").strip()
-                print(f"Entry {i}: category = '{cat}'")
-
-            for entry in standings_list:
-                cat = str(entry.get("category") or entry.get("class") or entry.get("categoryName") or "").lower().replace(" ", "")
-                rider = entry.get("rider", {}) or {}
-                name = rider.get("name") or rider.get("full_name") or "Unknown Rider"
-                pos = entry.get("position", 0)
-                pts = entry.get("points", 0)
-
-                if "motogp" in cat:
-                    if len(standings["motogp"]) < 3:
-                        standings["motogp"].append({"position": pos, "rider_name": name, "points": pts})
-                elif "moto2" in cat:
-                    if len(standings["moto2"]) < 3:
-                        standings["moto2"].append({"position": pos, "rider_name": name, "points": pts})
-                elif "moto3" in cat:
-                    if len(standings["moto3"]) < 3:
-                        standings["moto3"].append({"position": pos, "rider_name": name, "points": pts})
+            # 2. Fetch standings for each category
+            for cls, cat_uuid in cat_map.items():
+                resp = requests.get(f"{base}/results/standings?seasonUuid={season_uuid}&categoryUuid={cat_uuid}", timeout=10).json()
+                entries = resp if isinstance(resp, list) else []
+                for entry in entries[:3]:
+                    rider = entry.get("rider", {}) or {}
+                    name = rider.get("name") or rider.get("full_name") or "Unknown Rider"
+                    pos = entry.get("position", 0)
+                    pts = entry.get("points", 0)
+                    standings[cls].append({"position": pos, "rider_name": name, "points": pts})
 
             print(f"Standings loaded → MotoGP: {len(standings['motogp'])}, Moto2: {len(standings['moto2'])}, Moto3: {len(standings['moto3'])}")
         except Exception as se:
