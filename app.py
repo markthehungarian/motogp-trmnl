@@ -4,7 +4,7 @@ import time
 
 app = Flask(__name__)
 
-CACHE = {"data": None, "timestamp": 0} 
+CACHE = {"data": None, "timestamp": 0}
 CACHE_TTL = 900
 
 # YOUR CUSTOM TRACK MAPS
@@ -89,40 +89,18 @@ def normalize_circuit_name(name):
     return name
 
 def fetch_motogp_data():
-    base = "https://api.motogp.pulselive.com/motogp/v1"
     try:
-        seasons = requests.get(f"{base}/results/seasons", timeout=10).json()
-        season_uuid = next((s["id"] for s in seasons if s.get("current") or str(s.get("year")) == "2026"), "2026")
-
-        events_resp = requests.get(f"{base}/results/events?seasonUuid={season_uuid}", timeout=15).json()
-        events = events_resp if isinstance(events_resp, list) else []
-
-        today = datetime.now().date()
-        upcoming = [e for e in events if (date_str := e.get("date_start") or e.get("date")) and 
-                    datetime.strptime(date_str[:10], "%Y-%m-%d").date() >= today]
-
-        next_event = upcoming[0] if upcoming else (events[0] if events else {})
-
-        circuit_raw = next_event.get("circuit") if isinstance(next_event, dict) else None
-        circuit_name = ""
-        if isinstance(circuit_raw, dict):
-            circuit_name = circuit_raw.get("name") or circuit_raw.get("title", "Unknown")
-        elif isinstance(circuit_raw, str):
-            circuit_name = circuit_raw
-
-        clean_name = normalize_circuit_name(circuit_name)
-        info = SCHEDULE.get(clean_name, SCHEDULE["default"])
-
+        # For now we use a static next race (Jerez)
         data = {
             "next_race": {
-                "circuit": circuit_name,
-                "short_name": info["short_name"],
-                "weekend_date": info["weekend_date"],
-                "round": info["round"],
-                "track_map_url": CIRCUIT_MAPS.get(clean_name, CIRCUIT_MAPS["default"]),
-                "track_length": "4.423" if clean_name == "Circuito de Jerez – Ángel Nieto" else "N/A",
-                "lap_record_rider": "Jorge Martín" if clean_name == "Circuito de Jerez – Ángel Nieto" else "TBD",
-                "lap_record_time": "1:36.405" if clean_name == "Circuito de Jerez – Ángel Nieto" else "TBD"
+                "circuit": "Circuito de Jerez – Ángel Nieto",
+                "short_name": "JEREZ (ES)",
+                "weekend_date": "24-26 April",
+                "round": 5,
+                "track_map_url": CIRCUIT_MAPS.get("Circuito de Jerez – Ángel Nieto", CIRCUIT_MAPS["default"]),
+                "track_length": "4.423",
+                "lap_record_rider": "Jorge Martín",
+                "lap_record_time": "1:36.405"
             },
             "standings": STATIC_STANDINGS,
             "last_updated": datetime.now().isoformat()
