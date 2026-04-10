@@ -9,7 +9,7 @@ CACHE = {"data": None, "timestamp": 0}
 CACHE_TTL = 900  # 15 minutes
 
 # ===================================================================
-# YOUR CUSTOM TRACK MAPS (raw GitHub links)
+# YOUR CUSTOM TRACK MAPS (from your GitHub track-maps folder)
 # ===================================================================
 CIRCUIT_MAPS = {
     "Chang International Circuit": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/buriram.png",
@@ -39,7 +39,7 @@ CIRCUIT_MAPS = {
 }
 
 # ===================================================================
-# SCHEDULE - short names + weekend dates + round numbers from your PDF
+# SCHEDULE - short names + weekend dates + round numbers
 # ===================================================================
 SCHEDULE = {
     "Chang International Circuit": {"short_name": "BURIRAM (TL)", "weekend_date": "27 February – 1 March", "round": 1},
@@ -77,30 +77,21 @@ def normalize_circuit_name(name):
 def fetch_motogp_data():
     base = "https://api.motogp.pulselive.com/motogp/v1"
     try:
-        # Get season
+        # Get season UUID
         seasons = requests.get(f"{base}/results/seasons", timeout=10).json()
         season_uuid = next((s["id"] for s in seasons if s.get("current") or str(s.get("year")) == "2026"), "2026")
 
-        # Get events
+        # Get events for next race
         events_resp = requests.get(f"{base}/results/events?seasonUuid={season_uuid}", timeout=15).json()
         events = events_resp if isinstance(events_resp, list) else []
 
-        # Find next upcoming race
         today = datetime.now().date()
-        upcoming = []
-        for e in events:
-            date_str = e.get("date_start") or e.get("date")
-            if date_str:
-                try:
-                    event_date = datetime.strptime(date_str[:10], "%Y-%m-%d").date()
-                    if event_date >= today:
-                        upcoming.append(e)
-                except:
-                    pass
+        upcoming = [e for e in events if (date_str := e.get("date_start") or e.get("date")) and 
+                    datetime.strptime(date_str[:10], "%Y-%m-%d").date() >= today]
 
         next_event = upcoming[0] if upcoming else (events[0] if events else {})
 
-        # Extract circuit name safely
+        # Extract circuit
         circuit_raw = next_event.get("circuit") if isinstance(next_event, dict) else None
         circuit_name = ""
         if isinstance(circuit_raw, dict):
@@ -110,6 +101,26 @@ def fetch_motogp_data():
 
         clean_name = normalize_circuit_name(circuit_name)
         info = SCHEDULE.get(clean_name, SCHEDULE["default"])
+
+        # === NEW: Fetch real standings ===
+        standings_resp = requests.get(f"{base}/results/standings?seasonUuid={season_uuid}", timeout=15).json()
+        standings_list = standings_resp if isinstance(standings_resp, list) else []
+
+        standings = {"motogp": [], "moto2": [], "moto3": []}
+
+        for entry in standings_list[:50]:  # safety limit
+            cat = str(entry.get("category", "")).lower()
+            rider = entry.get("rider", {}) or {}
+            name = rider.get("name") or rider.get("full_name") or "Unknown Rider"
+            pos = entry.get("position", 0)
+            pts = entry.get("points", 0)
+
+            if cat == "motogp" and len(standings["motogp"]) < 3:
+                standings["motogp"].append({"position": pos, "rider_name": name, "points": pts})
+            elif cat == "moto2" and len(standings["moto2"]) < 3:
+                standings["moto2"].append({"position": pos, "rider_name": name, "points": pts})
+            elif cat == "moto3" and len(standings["moto3"]) < 3:
+                standings["moto3"].append({"position": pos, "rider_name": name, "points": pts})
 
         data = {
             "next_race": {
@@ -122,7 +133,7 @@ def fetch_motogp_data():
                 "lap_record_rider": "Jorge Martín" if clean_name == "Circuito de Jerez – Ángel Nieto" else "TBD",
                 "lap_record_time": "1:36.405" if clean_name == "Circuito de Jerez – Ángel Nieto" else "TBD"
             },
-            "standings": {"motogp": [], "moto2": [], "moto3": []},
+            "standings": standings,
             "last_updated": datetime.now().isoformat()
         }
         return data
