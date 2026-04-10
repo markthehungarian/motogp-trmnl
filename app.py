@@ -62,22 +62,22 @@ SCHEDULE = {
     "default": {"short_name": "UNKNOWN", "weekend_date": "TBD", "round": 0}
 }
 
-# === STATIC STANDINGS - EDIT THESE YOURSELF ===
+# === YOUR MANUAL STANDINGS (updated to match your PDF) ===
 STATIC_STANDINGS = {
     "motogp": [
-        {"position": 1, "rider_name": "Bezzecchi", "points": 81},
-        {"position": 2, "rider_name": "Martín", "points": 77},
-        {"position": 3, "rider_name": "Bagnaia", "points": 70}
+        {"position": 1, "rider_name": "M. Bezzecchi", "points": 81},
+        {"position": 2, "rider_name": "J. Martin",   "points": 77},
+        {"position": 3, "rider_name": "P. Acosta",   "points": 60}
     ],
     "moto2": [
-        {"position": 1, "rider_name": "Canet", "points": 65},
-        {"position": 2, "rider_name": "González", "points": 58},
-        {"position": 3, "rider_name": "Arbolino", "points": 52}
+        {"position": 1, "rider_name": "M. Gonzalez", "points": 39.5},
+        {"position": 2, "rider_name": "I. Guevara",  "points": 36},
+        {"position": 3, "rider_name": "D. Holgado",  "points": 33}
     ],
     "moto3": [
-        {"position": 1, "rider_name": "Alonso", "points": 72},
-        {"position": 2, "rider_name": "Kelso", "points": 61},
-        {"position": 3, "rider_name": "Suzuki", "points": 55}
+        {"position": 1, "rider_name": "M. Quiles",   "points": 65},
+        {"position": 2, "rider_name": "A. Carpe",    "points": 42},
+        {"position": 3, "rider_name": "V. Perrone",  "points": 38}
     ]
 }
 
@@ -124,7 +124,7 @@ def fetch_motogp_data():
                 "lap_record_rider": "Jorge Martín" if clean_name == "Circuito de Jerez – Ángel Nieto" else "TBD",
                 "lap_record_time": "1:36.405" if clean_name == "Circuito de Jerez – Ángel Nieto" else "TBD"
             },
-            "standings": STATIC_STANDINGS,   # ← Your manual data
+            "standings": STATIC_STANDINGS,
             "last_updated": datetime.now().isoformat()
         }
         return data
