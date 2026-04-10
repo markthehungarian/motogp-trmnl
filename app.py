@@ -8,7 +8,7 @@ app = Flask(__name__)
 CACHE = {"data": None, "timestamp": 0}
 CACHE_TTL = 900
 
-# YOUR CUSTOM TRACK MAPS
+# YOUR CUSTOM TRACK MAPS (from your GitHub repo)
 CIRCUIT_MAPS = {
     "Chang International Circuit": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/buriram.png",
     "Autódromo Internacional Ayrton Senna": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/brazil.png",
@@ -96,24 +96,22 @@ def fetch_motogp_data():
         clean_name = normalize_circuit_name(circuit_name)
         info = SCHEDULE.get(clean_name, SCHEDULE["default"])
 
-        # === REAL STANDINGS - fetch categories first, then standings per category ===
+        # === REAL STANDINGS using the exact category UUIDs ===
         standings = {"motogp": [], "moto2": [], "moto3": []}
-        try:
-            # 1. Get category UUIDs
-            cats_resp = requests.get(f"{base}/results/categories?seasonUuid={season_uuid}", timeout=10).json()
-            cat_map = {}
-            for c in cats_resp if isinstance(cats_resp, list) else []:
-                name = str(c.get("name", "")).lower()
-                if "motogp" in name:
-                    cat_map["motogp"] = c.get("id")
-                elif "moto2" in name:
-                    cat_map["moto2"] = c.get("id")
-                elif "moto3" in name:
-                    cat_map["moto3"] = c.get("id")
 
-            # 2. Fetch standings for each category
-            for cls, cat_uuid in cat_map.items():
-                resp = requests.get(f"{base}/results/standings?seasonUuid={season_uuid}&categoryUuid={cat_uuid}", timeout=10).json()
+        # Hardcoded category UUIDs for 2026 season
+        cat_uuids = {
+            "motogp": "e8c110ad-64aa-4e8e-8a86-f2f152f6a942",
+            "moto2": "549640b8-fd9c-4245-acfd-60e4bc38b25c",
+            "moto3": "954f7e65-2ef2-4423-b949-4961cc603e45"
+        }
+
+        for cls, cat_uuid in cat_uuids.items():
+            try:
+                resp = requests.get(
+                    f"{base}/results/standings?seasonUuid={season_uuid}&categoryUuid={cat_uuid}",
+                    timeout=10
+                ).json()
                 entries = resp if isinstance(resp, list) else []
                 for entry in entries[:3]:
                     rider = entry.get("rider", {}) or {}
@@ -121,10 +119,10 @@ def fetch_motogp_data():
                     pos = entry.get("position", 0)
                     pts = entry.get("points", 0)
                     standings[cls].append({"position": pos, "rider_name": name, "points": pts})
+            except Exception as se:
+                print(f"Standings fetch failed for {cls}: {se}")
 
-            print(f"Standings loaded → MotoGP: {len(standings['motogp'])}, Moto2: {len(standings['moto2'])}, Moto3: {len(standings['moto3'])}")
-        except Exception as se:
-            print(f"Standings fetch failed: {se}")
+        print(f"Standings loaded → MotoGP: {len(standings['motogp'])}, Moto2: {len(standings['moto2'])}, Moto3: {len(standings['moto3'])}")
 
         data = {
             "next_race": {
