@@ -62,7 +62,7 @@ SCHEDULE = {
     "default": {"short_name": "UNKNOWN", "weekend_date": "TBD", "round": 0}
 }
 
-# === YOUR MANUAL STANDINGS (updated to match your PDF) ===
+# YOUR MANUAL STANDINGS (from your PDF)
 STATIC_STANDINGS = {
     "motogp": [
         {"position": 1, "rider_name": "M. Bezzecchi", "points": 81},
