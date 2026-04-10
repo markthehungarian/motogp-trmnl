@@ -6,11 +6,9 @@ import time
 app = Flask(__name__)
 
 CACHE = {"data": None, "timestamp": 0}
-CACHE_TTL = 900  # 15 minutes
+CACHE_TTL = 900
 
-# ===================================================================
-# YOUR CUSTOM TRACK MAPS (from your GitHub track-maps folder)
-# ===================================================================
+# YOUR CUSTOM TRACK MAPS
 CIRCUIT_MAPS = {
     "Chang International Circuit": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/buriram.png",
     "Autódromo Internacional Ayrton Senna": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/brazil.png",
@@ -38,9 +36,7 @@ CIRCUIT_MAPS = {
     "default": "https://via.placeholder.com/700x280/222/eee?text=TRACK+MAP"
 }
 
-# ===================================================================
-# SCHEDULE - short names + weekend dates + round numbers
-# ===================================================================
+# SCHEDULE
 SCHEDULE = {
     "Chang International Circuit": {"short_name": "BURIRAM (TL)", "weekend_date": "27 February – 1 March", "round": 1},
     "Autódromo Internacional Ayrton Senna": {"short_name": "BRAZIL", "weekend_date": "20-22 March", "round": 2},
@@ -77,11 +73,10 @@ def normalize_circuit_name(name):
 def fetch_motogp_data():
     base = "https://api.motogp.pulselive.com/motogp/v1"
     try:
-        # Get season UUID
         seasons = requests.get(f"{base}/results/seasons", timeout=10).json()
         season_uuid = next((s["id"] for s in seasons if s.get("current") or str(s.get("year")) == "2026"), "2026")
 
-        # Get events for next race
+        # Next race
         events_resp = requests.get(f"{base}/results/events?seasonUuid={season_uuid}", timeout=15).json()
         events = events_resp if isinstance(events_resp, list) else []
 
@@ -91,7 +86,6 @@ def fetch_motogp_data():
 
         next_event = upcoming[0] if upcoming else (events[0] if events else {})
 
-        # Extract circuit
         circuit_raw = next_event.get("circuit") if isinstance(next_event, dict) else None
         circuit_name = ""
         if isinstance(circuit_raw, dict):
@@ -102,16 +96,16 @@ def fetch_motogp_data():
         clean_name = normalize_circuit_name(circuit_name)
         info = SCHEDULE.get(clean_name, SCHEDULE["default"])
 
-        # === NEW: Fetch real standings ===
+        # REAL STANDINGS (improved parsing)
         standings_resp = requests.get(f"{base}/results/standings?seasonUuid={season_uuid}", timeout=15).json()
         standings_list = standings_resp if isinstance(standings_resp, list) else []
 
         standings = {"motogp": [], "moto2": [], "moto3": []}
 
-        for entry in standings_list[:50]:  # safety limit
-            cat = str(entry.get("category", "")).lower()
+        for entry in standings_list:
+            cat = str(entry.get("category", "")).lower().replace(" ", "")
             rider = entry.get("rider", {}) or {}
-            name = rider.get("name") or rider.get("full_name") or "Unknown Rider"
+            name = rider.get("name") or rider.get("full_name") or entry.get("riderName", "Unknown")
             pos = entry.get("position", 0)
             pts = entry.get("points", 0)
 
