@@ -8,7 +8,7 @@ app = Flask(__name__)
 CACHE = {"data": None, "timestamp": 0}
 CACHE_TTL = 900
 
-# YOUR CUSTOM TRACK MAPS (your GitHub links)
+# YOUR CUSTOM TRACK MAPS
 CIRCUIT_MAPS = {
     "Chang International Circuit": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/buriram.png",
     "Autódromo Internacional Ayrton Senna": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/brazil.png",
@@ -73,7 +73,7 @@ def normalize_circuit_name(name):
 def fetch_motogp_data():
     base = "https://api.motogp.pulselive.com/motogp/v1"
     try:
-        # Season & next race (unchanged)
+        # Season & next race
         seasons = requests.get(f"{base}/results/seasons", timeout=10).json()
         season_uuid = next((s["id"] for s in seasons if s.get("current") or str(s.get("year")) == "2026"), "2026")
 
@@ -96,7 +96,7 @@ def fetch_motogp_data():
         clean_name = normalize_circuit_name(circuit_name)
         info = SCHEDULE.get(clean_name, SCHEDULE["default"])
 
-        # REAL STANDINGS with extra safety
+        # === REAL STANDINGS - more robust parsing ===
         standings = {"motogp": [], "moto2": [], "moto3": []}
         try:
             standings_resp = requests.get(f"{base}/results/standings?seasonUuid={season_uuid}", timeout=15).json()
@@ -105,18 +105,20 @@ def fetch_motogp_data():
             for entry in standings_list:
                 cat = str(entry.get("category", "")).lower().replace(" ", "")
                 rider = entry.get("rider", {}) or {}
-                name = rider.get("name") or rider.get("full_name") or "Unknown"
+                name = rider.get("name") or rider.get("full_name") or "Unknown Rider"
                 pos = entry.get("position", 0)
                 pts = entry.get("points", 0)
 
-                if cat == "motogp" and len(standings["motogp"]) < 3:
+                if "motogp" in cat and len(standings["motogp"]) < 3:
                     standings["motogp"].append({"position": pos, "rider_name": name, "points": pts})
-                elif cat == "moto2" and len(standings["moto2"]) < 3:
+                elif "moto2" in cat and len(standings["moto2"]) < 3:
                     standings["moto2"].append({"position": pos, "rider_name": name, "points": pts})
-                elif cat == "moto3" and len(standings["moto3"]) < 3:
+                elif "moto3" in cat and len(standings["moto3"]) < 3:
                     standings["moto3"].append({"position": pos, "rider_name": name, "points": pts})
+
+            print(f"Standings loaded - MotoGP: {len(standings['motogp'])}, Moto2: {len(standings['moto2'])}, Moto3: {len(standings['moto3'])}")
         except Exception as se:
-            print(f"Standings fetch failed: {se}")  # visible in Render logs
+            print(f"Standings fetch failed: {se}")
 
         data = {
             "next_race": {
