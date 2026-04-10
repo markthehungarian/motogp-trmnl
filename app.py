@@ -8,7 +8,7 @@ app = Flask(__name__)
 CACHE = {"data": None, "timestamp": 0}
 CACHE_TTL = 900
 
-# YOUR CUSTOM TRACK MAPS
+# YOUR CUSTOM TRACK MAPS (your GitHub links)
 CIRCUIT_MAPS = {
     "Chang International Circuit": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/buriram.png",
     "Autódromo Internacional Ayrton Senna": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/brazil.png",
@@ -73,10 +73,10 @@ def normalize_circuit_name(name):
 def fetch_motogp_data():
     base = "https://api.motogp.pulselive.com/motogp/v1"
     try:
+        # Season & next race (unchanged)
         seasons = requests.get(f"{base}/results/seasons", timeout=10).json()
         season_uuid = next((s["id"] for s in seasons if s.get("current") or str(s.get("year")) == "2026"), "2026")
 
-        # Next race
         events_resp = requests.get(f"{base}/results/events?seasonUuid={season_uuid}", timeout=15).json()
         events = events_resp if isinstance(events_resp, list) else []
 
@@ -96,25 +96,27 @@ def fetch_motogp_data():
         clean_name = normalize_circuit_name(circuit_name)
         info = SCHEDULE.get(clean_name, SCHEDULE["default"])
 
-        # REAL STANDINGS (improved parsing)
-        standings_resp = requests.get(f"{base}/results/standings?seasonUuid={season_uuid}", timeout=15).json()
-        standings_list = standings_resp if isinstance(standings_resp, list) else []
-
+        # REAL STANDINGS with extra safety
         standings = {"motogp": [], "moto2": [], "moto3": []}
+        try:
+            standings_resp = requests.get(f"{base}/results/standings?seasonUuid={season_uuid}", timeout=15).json()
+            standings_list = standings_resp if isinstance(standings_resp, list) else []
 
-        for entry in standings_list:
-            cat = str(entry.get("category", "")).lower().replace(" ", "")
-            rider = entry.get("rider", {}) or {}
-            name = rider.get("name") or rider.get("full_name") or entry.get("riderName", "Unknown")
-            pos = entry.get("position", 0)
-            pts = entry.get("points", 0)
+            for entry in standings_list:
+                cat = str(entry.get("category", "")).lower().replace(" ", "")
+                rider = entry.get("rider", {}) or {}
+                name = rider.get("name") or rider.get("full_name") or "Unknown"
+                pos = entry.get("position", 0)
+                pts = entry.get("points", 0)
 
-            if cat == "motogp" and len(standings["motogp"]) < 3:
-                standings["motogp"].append({"position": pos, "rider_name": name, "points": pts})
-            elif cat == "moto2" and len(standings["moto2"]) < 3:
-                standings["moto2"].append({"position": pos, "rider_name": name, "points": pts})
-            elif cat == "moto3" and len(standings["moto3"]) < 3:
-                standings["moto3"].append({"position": pos, "rider_name": name, "points": pts})
+                if cat == "motogp" and len(standings["motogp"]) < 3:
+                    standings["motogp"].append({"position": pos, "rider_name": name, "points": pts})
+                elif cat == "moto2" and len(standings["moto2"]) < 3:
+                    standings["moto2"].append({"position": pos, "rider_name": name, "points": pts})
+                elif cat == "moto3" and len(standings["moto3"]) < 3:
+                    standings["moto3"].append({"position": pos, "rider_name": name, "points": pts})
+        except Exception as se:
+            print(f"Standings fetch failed: {se}")  # visible in Render logs
 
         data = {
             "next_race": {
@@ -133,6 +135,7 @@ def fetch_motogp_data():
         return data
 
     except Exception as e:
+        print(f"CRITICAL ERROR: {str(e)}")
         return {"error": str(e), "last_updated": datetime.now().isoformat()}
 
 @app.route("/")
