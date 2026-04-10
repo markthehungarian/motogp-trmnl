@@ -4,7 +4,7 @@ import time
 
 app = Flask(__name__)
 
-CACHE = {"data": None, "timestamp": 0}
+CACHE = {"data": None, "timestamp": 0} 
 CACHE_TTL = 900
 
 # YOUR CUSTOM TRACK MAPS
