@@ -1,7 +1,7 @@
 from flask import Flask, jsonify
 import requests
 from datetime import datetime
-import time 
+import time
 
 app = Flask(__name__)
 
@@ -11,12 +11,10 @@ CACHE_TTL = 900  # 15 minutes cache
 BASE_URL = "https://api.motogp.pulselive.com/motogp/v1"
 
 # ============================================================
-# STATIC DATA - UPDATE THE URLs AND LAP RECORDS BELOW
+# STATIC DATA
 # ============================================================
 
-# Your custom track map images (GitHub raw URLs)
 CIRCUIT_MAPS = {
-    # 2026 Calendar circuits (mapped to your filenames)
     "Chang International Circuit": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/buriram.png",
     "Autódromo Internacional Ayrton Senna": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/brazil.png",
     "Circuit of the Americas": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/cota.png",
@@ -43,127 +41,55 @@ CIRCUIT_MAPS = {
     "default": "https://via.placeholder.com/700x280/222/eee?text=TRACK+MAP"
 }
 
-# Lap record + track length (static - update when a new record is set)
 CIRCUIT_INFO = {
-    # === Next races (already filled with current records) ===
-    "Automotodrom Brno": {
-        "length": "5.403",
-        "lap_record_rider": "F. Bagnaia",
-        "lap_record_time": "1:52.303"
-    },
-    "TT Circuit Assen": {
-        "length": "4.555",
-        "lap_record_rider": "F. Bagnaia",
-        "lap_record_time": "1:30.540"
-    },
-    "Sachsenring": {
-        "length": "3.671",
-        "lap_record_rider": "F. Di Giannantonio",
-        "lap_record_time": "1:19.071"
-    },
+    "Automotodrom Brno": {"length": "5.403", "lap_record_rider": "F. Bagnaia", "lap_record_time": "1:52.303"},
+    "TT Circuit Assen": {"length": "4.555", "lap_record_rider": "F. Bagnaia", "lap_record_time": "1:30.540"},
+    "Sachsenring": {"length": "3.671", "lap_record_rider": "F. Di Giannantonio", "lap_record_time": "1:19.071"},
+    "Chang International Circuit": {"length": "4.554", "lap_record_rider": "M. Bezzecchi", "lap_record_time": "1:28.526"},
+    "Autódromo Internacional Ayrton Senna": {"length": "3.835", "lap_record_rider": "M. Bezzecchi", "lap_record_time": "1:17.408"},
+    "Circuit of the Americas": {"length": "5.513", "lap_record_rider": "F. Di Giannantonio", "lap_record_time": "2:00.864"},
+    "Lusail International Circuit": {"length": "5.380", "lap_record_rider": "F. Bagnaia", "lap_record_time": "1:52.872"},
+    "Circuito de Jerez – Ángel Nieto": {"length": "4.423", "lap_record_rider": "M. Márquez", "lap_record_time": "1:36.405"},
+    "Bugatti Circuit": {"length": "4.185", "lap_record_rider": "M. Márquez", "lap_record_time": "1:29.288"},
+    "Circuit de Barcelona-Catalunya": {"length": "4.657", "lap_record_rider": "F. Bagnaia", "lap_record_time": "1:38.680"},
+    "Autodromo Internazionale del Mugello": {"length": "5.245", "lap_record_rider": "M. Bezzecchi", "lap_record_time": "1:43.921"},
+    "Balaton Park Circuit": {"length": "4.115", "lap_record_rider": "M. Bezzecchi", "lap_record_time": "1:35.XXX"},
+    "Silverstone Circuit": {"length": "5.891", "lap_record_rider": "F. Bagnaia", "lap_record_time": "1:58.168"},
+    "MotorLand Aragón": {"length": "5.077", "lap_record_rider": "F. Bagnaia", "lap_record_time": "1:46.XXX"},
+    "Misano World Circuit Marco Simoncelli": {"length": "4.226", "lap_record_rider": "F. Bagnaia", "lap_record_time": "1:30.XXX"},
+    "Red Bull Ring": {"length": "4.318", "lap_record_rider": "J. Martín", "lap_record_time": "1:22.643"},
+    "Mobility Resort Motegi": {"length": "4.801", "lap_record_rider": "M. Márquez", "lap_record_time": "1:44.XXX"},
+    "Pertamina Mandalika International Street Circuit": {"length": "4.313", "lap_record_rider": "F. Bagnaia", "lap_record_time": "1:31.XXX"},
+    "Phillip Island Grand Prix Circuit": {"length": "4.448", "lap_record_rider": "J. Martín", "lap_record_time": "1:27.767"},
+    "Petronas Sepang International Circuit": {"length": "5.543", "lap_record_rider": "F. Bagnaia", "lap_record_time": "1:56.337"},
+    "Algarve International Circuit": {"length": "4.592", "lap_record_rider": "J. Martín", "lap_record_time": "1:38.672"},
+    "Circuit Ricardo Tormo": {"length": "4.005", "lap_record_rider": "F. Bagnaia", "lap_record_time": "1:29.401"},
+    "default": {"length": "N/A", "lap_record_rider": "TBD", "lap_record_time": "TBD"}
+}
 
-    # === Other 2026 circuits (pre-filled with latest known records) ===
-    "Chang International Circuit": {
-        "length": "4.554",
-        "lap_record_rider": "M. Bezzecchi",
-        "lap_record_time": "1:28.526"
-    },
-    "Autódromo Internacional Ayrton Senna": {
-        "length": "3.835",
-        "lap_record_rider": "M. Bezzecchi",
-        "lap_record_time": "1:17.408"
-    },
-    "Circuit of the Americas": {
-        "length": "5.513",
-        "lap_record_rider": "F. Di Giannantonio",
-        "lap_record_time": "2:00.864"
-    },
-    "Lusail International Circuit": {
-        "length": "5.380",
-        "lap_record_rider": "F. Bagnaia",
-        "lap_record_time": "1:52.872"
-    },
-    "Circuito de Jerez – Ángel Nieto": {
-        "length": "4.423",
-        "lap_record_rider": "M. Márquez",
-        "lap_record_time": "1:36.405"
-    },
-    "Bugatti Circuit": {
-        "length": "4.185",
-        "lap_record_rider": "M. Márquez",
-        "lap_record_time": "1:29.288"
-    },
-    "Circuit de Barcelona-Catalunya": {
-        "length": "4.657",
-        "lap_record_rider": "F. Bagnaia",
-        "lap_record_time": "1:38.680"
-    },
-    "Autodromo Internazionale del Mugello": {
-        "length": "5.245",
-        "lap_record_rider": "M. Bezzecchi",
-        "lap_record_time": "1:43.921"
-    },
-    "Balaton Park Circuit": {
-        "length": "4.115",
-        "lap_record_rider": "M. Bezzecchi",
-        "lap_record_time": "1:35.XXX"   # Update when confirmed
-    },
-    "Silverstone Circuit": {
-        "length": "5.891",
-        "lap_record_rider": "F. Bagnaia",
-        "lap_record_time": "1:58.168"
-    },
-    "MotorLand Aragón": {
-        "length": "5.077",
-        "lap_record_rider": "F. Bagnaia",
-        "lap_record_time": "1:46.XXX"
-    },
-    "Misano World Circuit Marco Simoncelli": {
-        "length": "4.226",
-        "lap_record_rider": "F. Bagnaia",
-        "lap_record_time": "1:30.XXX"
-    },
-    "Red Bull Ring": {
-        "length": "4.318",
-        "lap_record_rider": "J. Martín",
-        "lap_record_time": "1:22.643"
-    },
-    "Mobility Resort Motegi": {
-        "length": "4.801",
-        "lap_record_rider": "M. Márquez",
-        "lap_record_time": "1:44.XXX"
-    },
-    "Pertamina Mandalika International Street Circuit": {
-        "length": "4.313",
-        "lap_record_rider": "F. Bagnaia",
-        "lap_record_time": "1:31.XXX"
-    },
-    "Phillip Island Grand Prix Circuit": {
-        "length": "4.448",
-        "lap_record_rider": "J. Martín",
-        "lap_record_time": "1:27.767"
-    },
-    "Petronas Sepang International Circuit": {
-        "length": "5.543",
-        "lap_record_rider": "F. Bagnaia",
-        "lap_record_time": "1:56.337"
-    },
-    "Algarve International Circuit": {
-        "length": "4.592",
-        "lap_record_rider": "J. Martín",
-        "lap_record_time": "1:38.672"
-    },
-    "Circuit Ricardo Tormo": {
-        "length": "4.005",
-        "lap_record_rider": "F. Bagnaia",
-        "lap_record_time": "1:29.401"
-    },
-
-    "default": {
-        "length": "N/A",
-        "lap_record_rider": "TBD",
-        "lap_record_time": "TBD"
-    }
+ROUND_MAP = {
+    "Chang International Circuit": 1,
+    "Autódromo Internacional Ayrton Senna": 2,
+    "Circuit of the Americas": 3,
+    "Lusail International Circuit": 4,
+    "Circuito de Jerez – Ángel Nieto": 5,
+    "Bugatti Circuit": 6,
+    "Circuit de Barcelona-Catalunya": 7,
+    "Autodromo Internazionale del Mugello": 8,
+    "Balaton Park Circuit": 9,
+    "Automotodrom Brno": 9,
+    "TT Circuit Assen": 10,
+    "Sachsenring": 11,
+    "Silverstone Circuit": 12,
+    "MotorLand Aragón": 13,
+    "Misano World Circuit Marco Simoncelli": 14,
+    "Red Bull Ring": 15,
+    "Mobility Resort Motegi": 16,
+    "Pertamina Mandalika International Street Circuit": 17,
+    "Phillip Island Grand Prix Circuit": 18,
+    "Petronas Sepang International Circuit": 19,
+    "Algarve International Circuit": 21,
+    "Circuit Ricardo Tormo": 22,
 }
 
 # ============================================================
@@ -190,7 +116,7 @@ def get_current_season_uuid():
         return None
 
 # ============================================================
-# MAIN DATA FETCH FUNCTION (LIVE)
+# MAIN DATA FETCH FUNCTION
 # ============================================================
 
 def fetch_motogp_data():
@@ -199,7 +125,7 @@ def fetch_motogp_data():
         if not season_uuid:
             raise Exception("Could not determine current season")
 
-        # Get all events and sort by date
+        # Get all events sorted by date
         all_events = requests.get(
             f"{BASE_URL}/results/events?seasonUuid={season_uuid}",
             timeout=15
@@ -207,7 +133,7 @@ def fetch_motogp_data():
 
         sorted_events = sorted(all_events, key=lambda e: e.get("date_start", "9999-12-31"))
 
-        # Find the next upcoming event
+        # Find next upcoming event
         next_event = None
         now = datetime.now()
         for e in sorted_events:
@@ -225,20 +151,12 @@ def fetch_motogp_data():
         if not next_event:
             raise Exception("No events found")
 
-       # Calculate round number more accurately
-now = datetime.now()
-finished_count = 0
-for e in sorted_events:
-    try:
-        event_date = datetime.fromisoformat(e.get("date_start", ""))
-        if event_date < now:
-            finished_count += 1
-    except:
-        pass
+        # Get round number from fixed map
+        circuit = next_event.get("circuit", {})
+        circuit_name = circuit.get("name", "Unknown Circuit")
+        round_num = ROUND_MAP.get(circuit_name, 0)
 
-round_num = finished_count + 1
-
-        # Format weekend dates
+        # Format dates
         date_start_str = next_event.get("date_start", "")
         date_end_str = next_event.get("date_end", date_start_str)
         try:
@@ -248,17 +166,14 @@ round_num = finished_count + 1
         except:
             weekend_date = date_start_str
 
-        # Circuit and event info
-        circuit = next_event.get("circuit", {})
-        circuit_name = circuit.get("name", "Unknown Circuit")
         title = next_event.get("name", next_event.get("sponsored_name", "Next Grand Prix"))
         short_name = circuit_name.split()[-1].upper() if circuit_name else "TBD"
 
-        # Get track map and lap record from static dictionaries
+        # Static info
         info = CIRCUIT_INFO.get(circuit_name, CIRCUIT_INFO["default"])
         track_map_url = CIRCUIT_MAPS.get(circuit_name, CIRCUIT_MAPS["default"])
 
-        # Fetch live standings (top 3 for each class)
+        # Live standings
         cat_uuids = {
             "motogp": "e8c110ad-64aa-4e8e-8a86-f2f152f6a942",
             "moto2": "549640b8-fd9c-4245-acfd-60e4bc38b25c",
