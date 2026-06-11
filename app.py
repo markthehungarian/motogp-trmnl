@@ -242,7 +242,7 @@ def fetch_motogp_data():
         circuit = next_event.get("circuit", {})
         circuit_name = circuit.get("name", "Unknown Circuit")
         title = next_event.get("name", next_event.get("sponsored_name", "Next Grand Prix"))
-        short_name = next_event.get("short_name", circuit_name.split()[-1].upper() if circuit_name else "TBD")
+        short_name = circuit_name.split()[-1].upper() if circuit_name else "TBD"
 
         # Get track map and lap record from static dictionaries
         info = CIRCUIT_INFO.get(circuit_name, CIRCUIT_INFO["default"])
