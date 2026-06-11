@@ -16,18 +16,36 @@ BASE_URL = "https://api.motogp.pulselive.com/motogp/v1"
 
 # Your custom track map images (GitHub raw URLs)
 CIRCUIT_MAPS = {
+    # 2026 Calendar circuits (mapped to your filenames)
+    "Chang International Circuit": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/buriram.png",
+    "Autódromo Internacional Ayrton Senna": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/brazil.png",
+    "Circuit of the Americas": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/cota.png",
+    "Lusail International Circuit": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/lusail.png",
+    "Circuito de Jerez – Ángel Nieto": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/jerez.png",
+    "Bugatti Circuit": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/lemans.png",
+    "Circuit de Barcelona-Catalunya": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/catalunya.png",
+    "Autodromo Internazionale del Mugello": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/mugello.png",
+    "Balaton Park Circuit": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/balaton.png",
     "Automotodrom Brno": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/brno.png",
     "TT Circuit Assen": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/assen.png",
     "Sachsenring": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/sachsen.png",
-    # Add all your other circuits below using the exact circuit name from the API
-    # Example:
-    # "Circuito de Jerez – Ángel Nieto": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/jerez.png",
-    # "Circuit of the Americas": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/cota.png",
+    "Silverstone Circuit": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/silver.png",
+    "MotorLand Aragón": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/aragon.png",
+    "Misano World Circuit Marco Simoncelli": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/misano.png",
+    "Red Bull Ring": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/austria.png",
+    "Mobility Resort Motegi": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/motegi.png",
+    "Pertamina Mandalika International Street Circuit": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/indonesia.png",
+    "Phillip Island Grand Prix Circuit": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/phillip.png",
+    "Petronas Sepang International Circuit": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/sepang.png",
+    "Algarve International Circuit": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/portugal.png",
+    "Circuit Ricardo Tormo": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/valencia.png",
+
     "default": "https://via.placeholder.com/700x280/222/eee?text=TRACK+MAP"
 }
 
 # Lap record + track length (static - update when a new record is set)
 CIRCUIT_INFO = {
+    # === Next races (already filled with current records) ===
     "Automotodrom Brno": {
         "length": "5.403",
         "lap_record_rider": "F. Bagnaia",
@@ -43,8 +61,104 @@ CIRCUIT_INFO = {
         "lap_record_rider": "F. Di Giannantonio",
         "lap_record_time": "1:19.071"
     },
-    # Add more circuits below as needed (use the exact circuit name from the API)
-    
+
+    # === Other 2026 circuits (pre-filled with latest known records) ===
+    "Chang International Circuit": {
+        "length": "4.554",
+        "lap_record_rider": "M. Bezzecchi",
+        "lap_record_time": "1:28.526"
+    },
+    "Autódromo Internacional Ayrton Senna": {
+        "length": "3.835",
+        "lap_record_rider": "M. Bezzecchi",
+        "lap_record_time": "1:17.408"
+    },
+    "Circuit of the Americas": {
+        "length": "5.513",
+        "lap_record_rider": "F. Di Giannantonio",
+        "lap_record_time": "2:00.864"
+    },
+    "Lusail International Circuit": {
+        "length": "5.380",
+        "lap_record_rider": "F. Bagnaia",
+        "lap_record_time": "1:52.872"
+    },
+    "Circuito de Jerez – Ángel Nieto": {
+        "length": "4.423",
+        "lap_record_rider": "M. Márquez",
+        "lap_record_time": "1:36.405"
+    },
+    "Bugatti Circuit": {
+        "length": "4.185",
+        "lap_record_rider": "M. Márquez",
+        "lap_record_time": "1:29.288"
+    },
+    "Circuit de Barcelona-Catalunya": {
+        "length": "4.657",
+        "lap_record_rider": "F. Bagnaia",
+        "lap_record_time": "1:38.680"
+    },
+    "Autodromo Internazionale del Mugello": {
+        "length": "5.245",
+        "lap_record_rider": "M. Bezzecchi",
+        "lap_record_time": "1:43.921"
+    },
+    "Balaton Park Circuit": {
+        "length": "4.115",
+        "lap_record_rider": "M. Bezzecchi",
+        "lap_record_time": "1:35.XXX"   # Update when confirmed
+    },
+    "Silverstone Circuit": {
+        "length": "5.891",
+        "lap_record_rider": "F. Bagnaia",
+        "lap_record_time": "1:58.168"
+    },
+    "MotorLand Aragón": {
+        "length": "5.077",
+        "lap_record_rider": "F. Bagnaia",
+        "lap_record_time": "1:46.XXX"
+    },
+    "Misano World Circuit Marco Simoncelli": {
+        "length": "4.226",
+        "lap_record_rider": "F. Bagnaia",
+        "lap_record_time": "1:30.XXX"
+    },
+    "Red Bull Ring": {
+        "length": "4.318",
+        "lap_record_rider": "J. Martín",
+        "lap_record_time": "1:22.643"
+    },
+    "Mobility Resort Motegi": {
+        "length": "4.801",
+        "lap_record_rider": "M. Márquez",
+        "lap_record_time": "1:44.XXX"
+    },
+    "Pertamina Mandalika International Street Circuit": {
+        "length": "4.313",
+        "lap_record_rider": "F. Bagnaia",
+        "lap_record_time": "1:31.XXX"
+    },
+    "Phillip Island Grand Prix Circuit": {
+        "length": "4.448",
+        "lap_record_rider": "J. Martín",
+        "lap_record_time": "1:27.767"
+    },
+    "Petronas Sepang International Circuit": {
+        "length": "5.543",
+        "lap_record_rider": "F. Bagnaia",
+        "lap_record_time": "1:56.337"
+    },
+    "Algarve International Circuit": {
+        "length": "4.592",
+        "lap_record_rider": "J. Martín",
+        "lap_record_time": "1:38.672"
+    },
+    "Circuit Ricardo Tormo": {
+        "length": "4.005",
+        "lap_record_rider": "F. Bagnaia",
+        "lap_record_time": "1:29.401"
+    },
+
     "default": {
         "length": "N/A",
         "lap_record_rider": "TBD",
