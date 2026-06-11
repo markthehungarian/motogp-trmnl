@@ -26,14 +26,25 @@ CIRCUIT_MAPS = {
     "default": "https://via.placeholder.com/700x280/222/eee?text=TRACK+MAP"
 }
 
-# Lap record + track length (static - update these when records change)
+# Lap record + track length (static - update when a new record is set)
 CIRCUIT_INFO = {
     "Automotodrom Brno": {
         "length": "5.403",
-        "lap_record_rider": "TBD",      # ← Update this
-        "lap_record_time": "TBD"        # ← Update this
+        "lap_record_rider": "F. Bagnaia",
+        "lap_record_time": "1:52.303"
     },
-    # Add the rest of your circuits here (copy from your old version)
+    "TT Circuit Assen": {
+        "length": "4.555",
+        "lap_record_rider": "F. Bagnaia",
+        "lap_record_time": "1:30.540"
+    },
+    "Sachsenring": {
+        "length": "3.671",
+        "lap_record_rider": "F. Di Giannantonio",
+        "lap_record_time": "1:19.071"
+    },
+    # Add more circuits below as needed (use the exact circuit name from the API)
+    
     "default": {
         "length": "N/A",
         "lap_record_rider": "TBD",
