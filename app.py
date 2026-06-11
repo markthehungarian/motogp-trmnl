@@ -225,8 +225,18 @@ def fetch_motogp_data():
         if not next_event:
             raise Exception("No events found")
 
-        # Calculate round number
-        round_num = sorted_events.index(next_event) + 1 if next_event in sorted_events else 0
+       # Calculate round number more accurately
+now = datetime.now()
+finished_count = 0
+for e in sorted_events:
+    try:
+        event_date = datetime.fromisoformat(e.get("date_start", ""))
+        if event_date < now:
+            finished_count += 1
+    except:
+        pass
+
+round_num = finished_count + 1
 
         # Format weekend dates
         date_start_str = next_event.get("date_start", "")
