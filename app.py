@@ -1,114 +1,185 @@
 from flask import Flask, jsonify
+import requests
 from datetime import datetime
 import time
 
 app = Flask(__name__)
 
 CACHE = {"data": None, "timestamp": 0}
-CACHE_TTL = 900
+CACHE_TTL = 900  # 15 minutes cache
 
-# YOUR CUSTOM TRACK MAPS
+BASE_URL = "https://api.motogp.pulselive.com/motogp/v1"
+
+# ============================================================
+# STATIC DATA - UPDATE THE URLs AND LAP RECORDS BELOW
+# ============================================================
+
+# Your custom track map images (GitHub raw URLs)
 CIRCUIT_MAPS = {
-    "Chang International Circuit": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/buriram.png",
-    "Autódromo Internacional Ayrton Senna": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/brazil.png",
-    "Circuit of the Americas": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/cota.png",
-    "Lusail International Circuit": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/lusail.png",
-    "Circuito de Jerez – Ángel Nieto": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/jerez.png",
-    "Bugatti Circuit": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/lemans.png",
-    "Circuit de Barcelona-Catalunya": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/catalunya.png",
-    "Autodromo Internazionale del Mugello": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/mugello.png",
-    "Balaton Park Circuit": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/balaton.png",
-    "Brno Circuit": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/brno.png",
+    "Automotodrom Brno": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/brno.png",
     "TT Circuit Assen": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/assen.png",
     "Sachsenring": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/sachsen.png",
-    "Silverstone Circuit": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/silver.png",
-    "MotorLand Aragón": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/aragon.png",
-    "Misano World Circuit Marco Simoncelli": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/misano.png",
-    "Red Bull Ring": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/austria.png",
-    "Mobility Resort Motegi": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/motegi.png",
-    "Pertamina Mandalika International Street Circuit": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/indonesia.png",
-    "Phillip Island Grand Prix Circuit": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/phillip.png",
-    "Petronas Sepang International Circuit": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/sepang.png",
-    "Algarve International Circuit": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/portugal.png",
-    "Circuit Ricardo Tormo": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/valencia.png",
-
+    # Add all your other circuits below using the exact circuit name from the API
+    # Example:
+    # "Circuito de Jerez – Ángel Nieto": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/jerez.png",
+    # "Circuit of the Americas": "https://raw.githubusercontent.com/markthehungarian/motogp-trmnl/main/track-maps/cota.png",
     "default": "https://via.placeholder.com/700x280/222/eee?text=TRACK+MAP"
 }
 
-# SCHEDULE
-SCHEDULE = {
-    "Chang International Circuit": {"short_name": "BURIRAM (TL)", "weekend_date": "27 February – 1 March", "round": 1},
-    "Autódromo Internacional Ayrton Senna": {"short_name": "BRAZIL", "weekend_date": "20-22 March", "round": 2},
-    "Circuit of the Americas": {"short_name": "COTA (USA)", "weekend_date": "27-29 March", "round": 3},
-    "Lusail International Circuit": {"short_name": "LUSAIL (QT)", "weekend_date": "10-12 April", "round": 4},
-    "Circuito de Jerez – Ángel Nieto": {"short_name": "JEREZ (ES)", "weekend_date": "24-26 April", "round": 5},
-    "Bugatti Circuit": {"short_name": "LE MANS (FR)", "weekend_date": "8-10 May", "round": 6},
-    "Circuit de Barcelona-Catalunya": {"short_name": "CATALUNYA (ES)", "weekend_date": "15-17 May", "round": 7},
-    "Autodromo Internazionale del Mugello": {"short_name": "MUGELLO (IT)", "weekend_date": "29-31 May", "round": 8},
-    "Balaton Park Circuit": {"short_name": "BALATON PARK (HU)", "weekend_date": "5-7 June", "round": 9},
-    "Brno Circuit": {"short_name": "BRNO (CZ)", "weekend_date": "19-21 June", "round": 10},
-    "TT Circuit Assen": {"short_name": "ASSEN (NL)", "weekend_date": "26-28 June", "round": 11},
-    "Sachsenring": {"short_name": "SACHSENRING (D)", "weekend_date": "10-12 July", "round": 12},
-    "Silverstone Circuit": {"short_name": "SILVERSTONE (UK)", "weekend_date": "7-9 August", "round": 13},
-    "MotorLand Aragón": {"short_name": "ARAGON (ES)", "weekend_date": "28-30 August", "round": 14},
-    "Misano World Circuit Marco Simoncelli": {"short_name": "SAN MARINO", "weekend_date": "11-13 September", "round": 15},
-    "Red Bull Ring": {"short_name": "RED BULL RING (AT)", "weekend_date": "18-20 September", "round": 16},
-    "Mobility Resort Motegi": {"short_name": "MOTEGI (JP)", "weekend_date": "2-4 October", "round": 17},
-    "Pertamina Mandalika International Street Circuit": {"short_name": "INDONESIA", "weekend_date": "9-11 October", "round": 18},
-    "Phillip Island Grand Prix Circuit": {"short_name": "PHILLIP ISLAND (AU)", "weekend_date": "23-25 October", "round": 19},
-    "Petronas Sepang International Circuit": {"short_name": "SEPANG (ML)", "weekend_date": "30 October – 1 November", "round": 20},
-    "Algarve International Circuit": {"short_name": "PORTUGAL", "weekend_date": "13-15 November", "round": 21},
-    "Circuit Ricardo Tormo": {"short_name": "VALENCIA (ES)", "weekend_date": "20-22 November", "round": 22},
-    "default": {"short_name": "UNKNOWN", "weekend_date": "TBD", "round": 0}
+# Lap record + track length (static - update these when records change)
+CIRCUIT_INFO = {
+    "Automotodrom Brno": {
+        "length": "5.403",
+        "lap_record_rider": "TBD",      # ← Update this
+        "lap_record_time": "TBD"        # ← Update this
+    },
+    # Add the rest of your circuits here (copy from your old version)
+    "default": {
+        "length": "N/A",
+        "lap_record_rider": "TBD",
+        "lap_record_time": "TBD"
+    }
 }
 
-# YOUR MANUAL STANDINGS (from your PDF)
-STATIC_STANDINGS = {
-    "motogp": [
-        {"position": 1, "rider_name": "M. Bezzecchi", "points": 81},
-        {"position": 2, "rider_name": "J. Martin",   "points": 77},
-        {"position": 3, "rider_name": "P. Acosta",   "points": 60}
-    ],
-    "moto2": [
-        {"position": 1, "rider_name": "M. Gonzalez", "points": 39.5},
-        {"position": 2, "rider_name": "I. Guevara",  "points": 36},
-        {"position": 3, "rider_name": "D. Holgado",  "points": 33}
-    ],
-    "moto3": [
-        {"position": 1, "rider_name": "M. Quiles",   "points": 65},
-        {"position": 2, "rider_name": "A. Carpe",    "points": 42},
-        {"position": 3, "rider_name": "V. Perrone",  "points": 38}
-    ]
-}
+# ============================================================
+# HELPER FUNCTIONS
+# ============================================================
 
-def normalize_circuit_name(name):
-    if not name:
-        return "default"
-    name = name.replace(" - ", " – ")
-    name = name.strip()
-    return name
+def shorten_rider_name(full_name):
+    if not full_name:
+        return "Unknown"
+    parts = full_name.split()
+    if len(parts) >= 2:
+        return f"{parts[0][0]}. {parts[-1]}"
+    return full_name
+
+def get_current_season_uuid():
+    try:
+        seasons = requests.get(f"{BASE_URL}/results/seasons", timeout=10).json()
+        for s in seasons:
+            if s.get("current") or str(s.get("year")) == "2026":
+                return s["id"]
+        return seasons[0]["id"] if seasons else None
+    except Exception as e:
+        print(f"Error getting season UUID: {e}")
+        return None
+
+# ============================================================
+# MAIN DATA FETCH FUNCTION (LIVE)
+# ============================================================
 
 def fetch_motogp_data():
     try:
-        # For now we use a static next race (Jerez)
-        data = {
+        season_uuid = get_current_season_uuid()
+        if not season_uuid:
+            raise Exception("Could not determine current season")
+
+        # Get all events and sort by date
+        all_events = requests.get(
+            f"{BASE_URL}/results/events?seasonUuid={season_uuid}",
+            timeout=15
+        ).json()
+
+        sorted_events = sorted(all_events, key=lambda e: e.get("date_start", "9999-12-31"))
+
+        # Find the next upcoming event
+        next_event = None
+        now = datetime.now()
+        for e in sorted_events:
+            try:
+                event_date = datetime.fromisoformat(e.get("date_start", ""))
+                if event_date > now:
+                    next_event = e
+                    break
+            except:
+                continue
+
+        if not next_event and sorted_events:
+            next_event = sorted_events[0]
+
+        if not next_event:
+            raise Exception("No events found")
+
+        # Calculate round number
+        round_num = sorted_events.index(next_event) + 1 if next_event in sorted_events else 0
+
+        # Format weekend dates
+        date_start_str = next_event.get("date_start", "")
+        date_end_str = next_event.get("date_end", date_start_str)
+        try:
+            start = datetime.fromisoformat(date_start_str)
+            end = datetime.fromisoformat(date_end_str)
+            weekend_date = f"{start.day}–{end.day} {start.strftime('%B')}"
+        except:
+            weekend_date = date_start_str
+
+        # Circuit and event info
+        circuit = next_event.get("circuit", {})
+        circuit_name = circuit.get("name", "Unknown Circuit")
+        title = next_event.get("name", next_event.get("sponsored_name", "Next Grand Prix"))
+        short_name = next_event.get("short_name", circuit_name.split()[-1].upper() if circuit_name else "TBD")
+
+        # Get track map and lap record from static dictionaries
+        info = CIRCUIT_INFO.get(circuit_name, CIRCUIT_INFO["default"])
+        track_map_url = CIRCUIT_MAPS.get(circuit_name, CIRCUIT_MAPS["default"])
+
+        # Fetch live standings (top 3 for each class)
+        cat_uuids = {
+            "motogp": "e8c110ad-64aa-4e8e-8a86-f2f152f6a942",
+            "moto2": "549640b8-fd9c-4245-acfd-60e4bc38b25c",
+            "moto3": "954f7e65-2ef2-4423-b949-4961cc603e45"
+        }
+
+        standings = {}
+        for cat, cat_uuid in cat_uuids.items():
+            try:
+                stand_resp = requests.get(
+                    f"{BASE_URL}/results/standings?seasonUuid={season_uuid}&categoryUuid={cat_uuid}",
+                    timeout=10
+                ).json()
+                classification = stand_resp.get("classification", [])[:3]
+                top3 = []
+                for entry in classification:
+                    rider = entry.get("rider", {})
+                    top3.append({
+                        "position": entry.get("position"),
+                        "rider_name": shorten_rider_name(rider.get("full_name", "")),
+                        "points": entry.get("points", 0)
+                    })
+                standings[cat] = top3
+            except Exception as e:
+                print(f"Error fetching {cat} standings: {e}")
+                standings[cat] = []
+
+        return {
             "next_race": {
-                "circuit": "Circuito de Jerez – Ángel Nieto",
-                "short_name": "JEREZ (ES)",
-                "weekend_date": "24-26 April",
-                "round": 5,
-                "track_map_url": CIRCUIT_MAPS.get("Circuito de Jerez – Ángel Nieto", CIRCUIT_MAPS["default"]),
-                "track_length": "4.423",
-                "lap_record_rider": "Jorge Martín",
-                "lap_record_time": "1:36.405"
+                "round": round_num,
+                "title": title,
+                "date": weekend_date,
+                "circuit": circuit_name,
+                "short_name": short_name,
+                "track_map_url": track_map_url,
+                "track_length": info.get("length", "N/A"),
+                "lap_record_rider": info.get("lap_record_rider", "TBD"),
+                "lap_record_time": info.get("lap_record_time", "TBD")
             },
-            "standings": STATIC_STANDINGS,
+            "standings": standings,
             "last_updated": datetime.now().isoformat()
         }
-        return data
 
     except Exception as e:
-        return {"error": str(e), "last_updated": datetime.now().isoformat()}
+        print(f"CRITICAL ERROR: {e}")
+        import traceback
+        traceback.print_exc()
+        return {
+            "error": str(e),
+            "message": "Failed to fetch MotoGP data – check Render logs",
+            "last_updated": datetime.now().isoformat()
+        }
+
+# ============================================================
+# ROUTES
+# ============================================================
 
 @app.route("/")
 @app.route("/motogp")
